@@ -1,5 +1,3 @@
-group = 'com.hltech'
-
 buildscript {
     ext {
         repos = {
@@ -17,6 +15,8 @@ plugins {
     id 'jacoco'
     id 'checkstyle'
 }
+
+group = 'com.hltech'
 
 repositories(repos)
 

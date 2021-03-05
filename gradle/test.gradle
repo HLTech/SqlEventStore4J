@@ -7,7 +7,6 @@ buildscript{
         postgresqlVersion = '42.2.10'
         flywayVersion = '7.5.3'
 
-        set 'rest-assured.version',"$restAssuredVersion"
     }
 }
 
