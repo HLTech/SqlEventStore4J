@@ -18,37 +18,35 @@ public class SimpleEventTypeMapper implements EventTypeMapper {
 
     @Override
     public <T extends Event> String toName(Class<T> eventType) {
-        return eventTypeToNameAndVersionMap.get(eventType).getName();
+        NameAndVersion nameAndVersion = eventTypeToNameAndVersionMap.get(eventType);
+        if (nameAndVersion == null) {
+            throw new EventTypeMappingException("Mapping to event name not found for event type: " + eventType);
+        }
+        return nameAndVersion.getName();
     }
 
     @Override
     public <T extends Event> short toVersion(Class<T> eventType) {
-        return eventTypeToNameAndVersionMap.get(eventType).getVersion();
+        NameAndVersion nameAndVersion = eventTypeToNameAndVersionMap.get(eventType);
+        if (nameAndVersion == null) {
+            throw new EventTypeMappingException("Mapping to event version not found for event type: " + eventType);
+        }
+        return nameAndVersion.getVersion();
     }
 
     @Override
     public  Class<? extends Event> toType(String eventName, short eventVersion) {
-        return eventNameAndVersionToTypeMap.get(new NameAndVersion(eventName, eventVersion));
+        Class<? extends Event> eventType = eventNameAndVersionToTypeMap.get(new NameAndVersion(eventName, eventVersion));
+        if (eventType == null) {
+            throw new EventTypeMappingException("Mapping to event type not found for event name: " + eventName + " and event version: " + eventVersion);
+        }
+        return eventType;
     }
 
-    public <T extends Event> void registerMappings(Collection<TypeNameAndVersion> mappings) {
-        mappings.forEach(typeNameAndVersion -> {
-            eventNameAndVersionToTypeMap.put(typeNameAndVersion.getNameAndVersion(), typeNameAndVersion.getType());
-            eventTypeToNameAndVersionMap.put(typeNameAndVersion.getType(), typeNameAndVersion.getNameAndVersion());
-        });
-    }
-
+    @Override
     public <T extends Event> void registerMapping(TypeNameAndVersion mapping) {
         eventNameAndVersionToTypeMap.put(mapping.getNameAndVersion(), mapping.getType());
         eventTypeToNameAndVersionMap.put(mapping.getType(), mapping.getNameAndVersion());
-    }
-
-    public <T extends Event> void registerMapping(
-            Class<T> eventType,
-            String eventName,
-            short eventVersion
-    ) {
-        registerMapping(new TypeNameAndVersion(eventType, new NameAndVersion(eventName, eventVersion)));
     }
 
 }

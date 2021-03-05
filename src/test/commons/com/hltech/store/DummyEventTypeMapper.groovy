@@ -17,4 +17,9 @@ class DummyEventTypeMapper implements EventTypeMapper {
         DummyEvent.class
     }
 
+    @Override
+    <T extends Event> void registerMapping(TypeNameAndVersion mapping) {
+
+    }
+
 }

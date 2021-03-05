@@ -6,6 +6,7 @@ buildscript{
         testContainersVersion = '1.12.2'
         postgresqlVersion = '42.2.10'
         flywayVersion = '7.5.3'
+        cglibNodepVersion = '3.3.0'
 
     }
 }
@@ -25,6 +26,7 @@ dependencies {
     testImplementation "org.spockframework:spock-core:$spockVersion"
     testImplementation "org.postgresql:postgresql:$postgresqlVersion"
     testImplementation "org.flywaydb:flyway-core:$flywayVersion"
+    testImplementation "cglib:cglib-nodep:$cglibNodepVersion"
 }
 
 idea {

@@ -1,5 +1,6 @@
 package com.hltech.store;
 
+import java.util.Collection;
 import java.util.Objects;
 
 public interface EventTypeMapper {
@@ -9,6 +10,16 @@ public interface EventTypeMapper {
     <T extends Event> short toVersion(Class<T> eventType);
 
     Class<? extends Event> toType(String eventName, short eventVersion);
+
+    <T extends Event> void registerMapping(TypeNameAndVersion mapping);
+
+    default <T extends Event> void registerMapping(Class<T> eventType, String eventName, short eventVersion) {
+        registerMapping(new TypeNameAndVersion(eventType, eventName, eventVersion));
+    }
+
+    default <T extends Event> void registerMappings(Collection<TypeNameAndVersion> mappings) {
+        mappings.forEach(this::registerMapping);
+    }
 
     class TypeNameAndVersion {
 
@@ -20,8 +31,21 @@ public interface EventTypeMapper {
             this.nameAndVersion = nameAndVersion;
         }
 
+        public TypeNameAndVersion(Class<? extends Event> type, String name, short version) {
+            this.type = type;
+            this.nameAndVersion = new NameAndVersion(name, version);
+        }
+
         public Class<? extends Event> getType() {
             return this.type;
+        }
+
+        public String getName() {
+            return this.nameAndVersion.name;
+        }
+
+        public short getVersion() {
+            return this.nameAndVersion.version;
         }
 
         public NameAndVersion getNameAndVersion() {
@@ -108,6 +132,14 @@ public interface EventTypeMapper {
             result = result * prime + ($name == null ? 43 : $name.hashCode());
             result = result * prime + this.version;
             return result;
+        }
+
+    }
+
+    class EventTypeMappingException extends RuntimeException {
+
+        EventTypeMappingException(String message) {
+            super(message);
         }
 
     }
