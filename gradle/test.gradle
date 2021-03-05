@@ -3,7 +3,7 @@ buildscript{
         groovyAllVersion = '2.5.13'
         spockVersion = '1.3-groovy-2.5'
         spockReportsVersion = '1.8.0'
-        testContainersVersion = '1.12.2'
+        testContainersVersion = '1.15.2'
         postgresqlVersion = '42.2.10'
         flywayVersion = '7.5.3'
         cglibNodepVersion = '3.3.0'
