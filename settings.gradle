@@ -1,8 +1,1 @@
-pluginManagement {
-    repositories {
-        maven { url repoMirror }
-        mavenLocal()
-    }
-}
-
 rootProject.name = 'event-store'
