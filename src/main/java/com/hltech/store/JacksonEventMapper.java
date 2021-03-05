@@ -1,8 +1,7 @@
 package com.hltech.store;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.IOException;
 
 public class JacksonEventMapper implements EventMapper {
 
@@ -16,7 +15,7 @@ public class JacksonEventMapper implements EventMapper {
     public <T extends Event> T stringToEvent(String eventString, Class<T> eventType) {
         try {
             return objectMapper.readValue(eventString, eventType);
-        } catch (IOException ex) {
+        } catch (JsonProcessingException ex) {
             throw new IllegalStateException("Could not read event json", ex);
         }
     }
@@ -25,7 +24,7 @@ public class JacksonEventMapper implements EventMapper {
     public <T extends Event> String eventToString(T event) {
         try {
             return objectMapper.writeValueAsString(event);
-        } catch (IOException ex) {
+        } catch (JsonProcessingException ex) {
             throw new IllegalStateException("Could not write event json", ex);
         }
     }

@@ -20,6 +20,10 @@ class DummyEvent implements Event {
         this(UUID.randomUUID(), aggregateId)
     }
 
+    DummyEvent() {
+        this(UUID.randomUUID(), UUID.randomUUID())
+    }
+
     @Override
     UUID getId() {
         id
