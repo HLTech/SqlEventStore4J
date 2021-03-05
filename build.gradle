@@ -1,0 +1,39 @@
+group = 'com.hltech'
+
+buildscript {
+    ext {
+        repos = {
+            gradlePluginPortal()
+            mavenLocal()
+            mavenCentral()
+        }
+    }
+}
+
+plugins {
+    id 'java'
+    id 'idea'
+    id 'groovy'
+    id 'jacoco'
+    id 'checkstyle'
+}
+
+repositories(repos)
+
+apply from: 'gradle/test.gradle'
+apply from: 'gradle/codequality.gradle'
+
+
+sourceCompatibility = 11
+targetCompatibility = 11
+
+dependencies {
+    implementation 'org.slf4j:slf4j-api:1.7.25'
+    implementation 'org.slf4j:slf4j-simple:1.7.25'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.1'
+    implementation "io.vavr:vavr:0.10.3"
+
+    /* LOMBOK - generate additional bytecode during compilation*/
+    compileOnly "org.projectlombok:lombok:1.18.16"
+    annotationProcessor "org.projectlombok:lombok:1.18.16"
+}

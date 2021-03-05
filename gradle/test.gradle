@@ -1,0 +1,35 @@
+buildscript{
+    ext {
+        groovyAllVersion = '2.5.13'
+        spockVersion = '1.3-groovy-2.5'
+        spockReportsVersion = '1.8.0'
+        testContainersVersion = '1.12.2'
+        postgresqlVersion = '42.2.10'
+        flywayVersion = '7.5.3'
+
+        set 'rest-assured.version',"$restAssuredVersion"
+    }
+}
+
+sourceSets {
+    test.groovy.srcDirs(
+            "src/test/unit",
+            "src/test/integration",
+            "src/test/functional",
+            "src/test/commons"
+    )
+}
+
+dependencies {
+    testImplementation "org.testcontainers:postgresql:$testContainersVersion"
+    testImplementation "org.codehaus.groovy:groovy-all:$groovyAllVersion"
+    testImplementation "org.spockframework:spock-core:$spockVersion"
+    testImplementation "org.postgresql:postgresql:$postgresqlVersion"
+    testImplementation "org.flywaydb:flyway-core:$flywayVersion"
+}
+
+idea {
+    module {
+        test
+    }
+}

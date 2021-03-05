@@ -1,0 +1,12 @@
+checkstyle {
+    toolVersion "8.14"
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        xml.destination file("${buildDir}/jacoco.xml")
+        csv.enabled false
+        html.destination file("${buildDir}/jacocoHtml")
+    }
+}
