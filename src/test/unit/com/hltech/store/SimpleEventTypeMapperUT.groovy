@@ -6,7 +6,7 @@ import spock.lang.Subject
 class SimpleEventTypeMapperUT extends Specification {
 
     @Subject
-    def simpleEventTypeMapper = new SimpleEventTypeMapper()
+    def simpleEventTypeMapper = new SimpleEventTypeMapper<DummyBaseEvent>()
 
     def "toType should return expected type when one previously registered"() {
 

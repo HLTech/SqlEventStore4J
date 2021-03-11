@@ -10,7 +10,7 @@ class JacksonEventMapperUT extends Specification {
     ObjectMapper objectMapper = Mock()
 
     @Subject
-    def jacksonEventMapper = new JacksonEventMapper(objectMapper)
+    def jacksonEventMapper = new JacksonEventMapper<DummyBaseEvent>(objectMapper)
 
 
     def "eventToString should call objectMapper.writeValueAsString method and propagate its response"() {

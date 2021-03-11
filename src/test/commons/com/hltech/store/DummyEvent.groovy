@@ -3,7 +3,7 @@ package com.hltech.store
 import groovy.transform.EqualsAndHashCode
 
 @EqualsAndHashCode
-class DummyEvent implements Event {
+class DummyEvent implements DummyBaseEvent {
 
     UUID id
     UUID aggregateId

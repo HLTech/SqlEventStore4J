@@ -1,5 +1,6 @@
 package com.hltech.store
 
+import spock.lang.Subject
 
 import static org.testcontainers.shaded.org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
 
@@ -8,7 +9,14 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
     def eventTypeMapper = new DummyEventTypeMapper()
     def eventMapper = new DummyEventMapper()
 
-    def postgresEventStore = new PostgresEventStore(eventTypeMapper, eventMapper, dataSource)
+    @Subject
+    def postgresEventStore = new PostgresEventStore(
+            DummyBaseEvent.EVENT_ID_EXTRACTOR,
+            DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
+            eventTypeMapper,
+            eventMapper,
+            dataSource
+    )
 
     def "save should be able to save events in database"() {
 
@@ -19,7 +27,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
             def rows = dbClient.rows("select * from event where aggregate_id = '${AGGREGATE_ID}' order by order_of_occurrence asc".toString())
 
         and: 'Table rows for events as expected'
-            AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
+            AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
                 assert rows[idx]['id'] == event.id
                 assert rows[idx]['aggregate_id'] == event.aggregateId
                 assert rows[idx]['payload'].toString().replaceAll(" ", "") == eventMapper.eventToString(event).replaceAll(" ", "")
@@ -44,7 +52,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
             events.size() == AGGREGATE_EVENTS.size()
 
         and: 'Events in correct order'
-            AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
+            AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
                 assert event == events[idx]
             }
 
@@ -73,12 +81,20 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
         when: 'Search for events by stream type'
             def events = postgresEventStore.findAll(STREAM_TYPE)
 
-        then: 'Events found'
-            events.size() == ALL_EVENTS.size()
+        then: 'Events found for aggregate'
+            events[AGGREGATE_ID].size() == AGGREGATE_EVENTS.size()
 
-        and: 'Events in correct order'
-            ALL_EVENTS.eachWithIndex { Event event, int idx ->
-                assert event == events[idx]
+        and: 'Events for aggregate in correct order'
+            AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
+                assert event == events[AGGREGATE_ID][idx]
+            }
+
+        and: 'Events found for another aggregate'
+            events[ANOTHER_AGGREGATE_ID].size() == ANOTHER_AGGREGATE_EVENTS.size()
+
+        and: 'Events for another aggregate in correct order'
+            ANOTHER_AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
+                assert event == events[ANOTHER_AGGREGATE_ID][idx]
             }
 
         and: 'Zero event found in another stream type'
@@ -112,7 +128,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
             events.size() == AGGREGATE_EVENTS.size()
 
         and: 'Events in correct order'
-            AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
+            AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
                 assert event == events[idx]
             }
 
@@ -143,7 +159,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
             insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
 
         expect: 'Only events occurred at or before given event has been returned'
-            AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
+            AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
                 List<DummyEvent> events = postgresEventStore.findAllToEvent(
                         event,
                         STREAM_TYPE
@@ -202,10 +218,10 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
     }
 
     private void insertEventsToDatabase(
-            List<Event> events,
+            List<DummyBaseEvent> events,
             String streamType
     ) {
-        events.each { Event event ->
+        events.each { DummyBaseEvent event ->
             String payload = eventMapper.eventToString(event)
             dbClient.execute(
                     "INSERT INTO EVENT (ID, AGGREGATE_ID, PAYLOAD, STREAM_TYPE, EVENT_NAME, EVENT_VERSION) VALUES (?::UUID, ?::UUID, ?::JSONB, ?, ?, ?)",

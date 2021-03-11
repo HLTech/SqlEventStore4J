@@ -1,6 +1,6 @@
 package com.hltech.store
 
-class AnotherDummyEvent implements Event {
+class AnotherDummyEvent implements DummyBaseEvent {
 
     @Override
     UUID getId() {

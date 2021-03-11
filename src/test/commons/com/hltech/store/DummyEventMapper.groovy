@@ -2,12 +2,12 @@ package com.hltech.store
 
 import groovy.json.JsonSlurper
 
-class DummyEventMapper implements EventMapper {
+class DummyEventMapper implements EventMapper<DummyBaseEvent> {
 
     static SLURPER = new JsonSlurper()
 
     @Override
-    <T extends Event> DummyEvent stringToEvent(String eventString, Class<T> eventType) {
+    DummyBaseEvent stringToEvent(String eventString, Class<? extends DummyBaseEvent> eventType) {
         def parsedJson = SLURPER.parseText(eventString)
         new DummyEvent(
                 UUID.fromString(parsedJson['id'].toString()),
@@ -16,7 +16,7 @@ class DummyEventMapper implements EventMapper {
     }
 
     @Override
-    String eventToString(Event event) {
+    String eventToString(DummyBaseEvent event) {
         """{ "id": "$event.id", "aggregateId": "$event.aggregateId" }"""
     }
 

@@ -3,40 +3,40 @@ package com.hltech.store;
 import java.util.Collection;
 import java.util.Objects;
 
-public interface EventTypeMapper {
+public interface EventTypeMapper<E> {
 
-    <T extends Event> String toName(Class<T> eventType);
+    String toName(Class<? extends E> eventType);
 
-    <T extends Event> short toVersion(Class<T> eventType);
+    short toVersion(Class<? extends E> eventType);
 
-    Class<? extends Event> toType(String eventName, short eventVersion);
+    Class<? extends E> toType(String eventName, short eventVersion);
 
-    <T extends Event> void registerMapping(TypeNameAndVersion mapping);
+    void registerMapping(TypeNameAndVersion<? extends E> mapping);
 
-    default <T extends Event> void registerMapping(Class<T> eventType, String eventName, short eventVersion) {
-        registerMapping(new TypeNameAndVersion(eventType, eventName, eventVersion));
+    default void registerMapping(Class<? extends E> eventType, String eventName, short eventVersion) {
+        registerMapping(new TypeNameAndVersion<E>(eventType, eventName, eventVersion));
     }
 
-    default <T extends Event> void registerMappings(Collection<TypeNameAndVersion> mappings) {
+    default void registerMappings(Collection<TypeNameAndVersion<E>> mappings) {
         mappings.forEach(this::registerMapping);
     }
 
-    class TypeNameAndVersion {
+    class TypeNameAndVersion<E> {
 
-        private final Class<? extends Event> type;
+        private final Class<? extends E> type;
         private final NameAndVersion nameAndVersion;
 
-        public TypeNameAndVersion(Class<? extends Event> type, NameAndVersion nameAndVersion) {
+        public TypeNameAndVersion(Class<? extends E> type, NameAndVersion nameAndVersion) {
             this.type = type;
             this.nameAndVersion = nameAndVersion;
         }
 
-        public TypeNameAndVersion(Class<? extends Event> type, String name, short version) {
+        public TypeNameAndVersion(Class<? extends E> type, String name, short version) {
             this.type = type;
             this.nameAndVersion = new NameAndVersion(name, version);
         }
 
-        public Class<? extends Event> getType() {
+        public Class<? extends E> getType() {
             return this.type;
         }
 

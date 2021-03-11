@@ -1,9 +1,9 @@
 package com.hltech.store;
 
-public interface EventMapper {
+public interface EventMapper<T> {
 
-    <T extends Event> T stringToEvent(String eventString, Class<T> eventType);
+    T stringToEvent(String eventString, Class<? extends T> eventType);
 
-    <T extends Event> String eventToString(T event);
+    String eventToString(T event);
 
 }
