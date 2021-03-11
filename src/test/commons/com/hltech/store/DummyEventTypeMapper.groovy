@@ -1,24 +1,24 @@
 package com.hltech.store
 
-class DummyEventTypeMapper implements EventTypeMapper {
+class DummyEventTypeMapper implements EventTypeMapper<DummyBaseEvent> {
 
     @Override
-    <T extends Event> String toName(Class<T> eventType) {
+    String toName(Class<? extends DummyBaseEvent> eventType) {
         "DummyEvent"
     }
 
     @Override
-    <T extends Event> short toVersion(Class<T> eventType) {
+    short toVersion(Class<? extends DummyBaseEvent> eventType) {
         1
     }
 
     @Override
-    Class<? extends Event> toType(String eventName, short eventVersion) {
+    Class<? extends DummyBaseEvent> toType(String eventName, short eventVersion) {
         DummyEvent.class
     }
 
     @Override
-    <T extends Event> void registerMapping(TypeNameAndVersion mapping) {
+    void registerMapping(TypeNameAndVersion<? extends DummyBaseEvent> mapping) {
 
     }
 

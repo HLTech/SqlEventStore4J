@@ -1,7 +1,5 @@
 package com.hltech.store;
 
-import io.vavr.collection.Iterator;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,17 +9,17 @@ import java.util.function.Supplier;
 import static io.vavr.collection.Stream.ofAll;
 import static java.util.stream.Collectors.toList;
 
-public class AggregateRepository<T> {
+public class AggregateRepository<A, E> {
 
-    private final EventStore eventStore;
-    private final Supplier<T> initialAggregateStateSupplier;
-    private final BiFunction<T, Event, T> eventApplier;
+    private final EventStore<E> eventStore;
+    private final Supplier<A> initialAggregateStateSupplier;
+    private final BiFunction<A, E, A> eventApplier;
     private final String streamType;
 
     public AggregateRepository(
-            EventStore eventStore,
-            Supplier<T> initialAggregateStateSupplier,
-            BiFunction<T, Event, T> eventApplier,
+            EventStore<E> eventStore,
+            Supplier<A> initialAggregateStateSupplier,
+            BiFunction<A, E, A> eventApplier,
             String streamType
     ) {
         this.eventStore = eventStore;
@@ -30,47 +28,47 @@ public class AggregateRepository<T> {
         this.streamType = streamType;
     }
 
-    public void save(Event event) {
+    public void save(E event) {
         eventStore.save(event, streamType);
     }
 
-    public Optional<T> find(
+    public Optional<A> find(
             UUID aggregateId
     ) {
-        List<Event> events = eventStore.findAll(aggregateId, streamType);
+        List<E> events = eventStore.findAll(aggregateId, streamType);
         return eventsToAggregate(events);
     }
 
-    public T get(UUID aggregateId) {
+    public A get(UUID aggregateId) {
         return find(aggregateId)
                 .orElseThrow(() -> new IllegalStateException("Could not find aggregate with id: " + aggregateId + " in stream: " + streamType));
     }
 
-    public Optional<T> findToEvent(Event toEvent) {
-        List<Event> events = eventStore.findAllToEvent(toEvent, streamType);
+    public Optional<A> findToEvent(E toEvent) {
+        List<E> events = eventStore.findAllToEvent(toEvent, streamType);
         return eventsToAggregate(events);
     }
 
-    public T getToEvent(Event toEvent) {
+    public A getToEvent(E toEvent) {
         return findToEvent(toEvent)
-                .orElseThrow(() -> new IllegalStateException("Could not find aggregate to event with id: " + toEvent.getId() + " in stream: " + streamType));
+                .orElseThrow(() -> new IllegalStateException("Could not find aggregate to event: " + toEvent + " in stream: " + streamType));
     }
 
-    public List<T> findAll(String streamType) {
-        List<Event> events = eventStore.findAll(streamType);
-        return Iterator.ofAll(events)
-                .groupBy(Event::getAggregateId)
-                .mapValues(releaseCandidateGroupEvents -> eventsToAggregate(releaseCandidateGroupEvents.toJavaList()))
+    public List<A> findAll(String streamType) {
+        return eventStore
+                .findAll(streamType)
                 .values()
+                .stream()
+                .map(this::eventsToAggregate)
                 .map(Optional::get)
                 .collect(toList());
     }
 
-    private Optional<T> eventsToAggregate(List<Event> events) {
+    private Optional<A> eventsToAggregate(List<E> events) {
         if (events.isEmpty()) {
             return Optional.empty();
         } else {
-            T aggregate = ofAll(events).foldLeft(initialAggregateStateSupplier.get(), eventApplier);
+            A aggregate = ofAll(events).foldLeft(initialAggregateStateSupplier.get(), eventApplier);
             return Optional.of(aggregate);
         }
     }

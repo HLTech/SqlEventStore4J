@@ -3,11 +3,11 @@ package com.hltech.store
 class DummyAggregate {
 
     static INITIAL_STATE_SUPPLIER = { -> new DummyAggregate() }
-    static EVENT_APPLIER = { DummyAggregate aggregate, Event event -> aggregate.apply(event) }
+    static EVENT_APPLIER = { DummyAggregate aggregate, DummyBaseEvent event -> aggregate.apply(event) }
 
-    List<Event> appliedEvents = []
+    List<DummyBaseEvent> appliedEvents = []
 
-    DummyAggregate apply(Event event) {
+    DummyAggregate apply(DummyBaseEvent event) {
         appliedEvents.add(event)
         this
     }

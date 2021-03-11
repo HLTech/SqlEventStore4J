@@ -8,7 +8,7 @@ class AggregateRepositoryUT extends Specification {
     def eventStore = Mock(EventStore)
 
     @Subject
-    AggregateRepository<DummyAggregate> repository = new AggregateRepository(
+    AggregateRepository<DummyAggregate, DummyBaseEvent> repository = new AggregateRepository(
             eventStore,
             DummyAggregate.INITIAL_STATE_SUPPLIER,
             DummyAggregate.EVENT_APPLIER,
@@ -139,14 +139,14 @@ class AggregateRepositoryUT extends Specification {
 
         then: 'Exception thrown'
             def ex = thrown(IllegalStateException)
-            ex.message == "Could not find aggregate to event with id: $EVENT.id in stream: $STREAM_TYPE"
+            ex.message == "Could not find aggregate to event: $EVENT in stream: $STREAM_TYPE"
 
     }
 
     def "findAll should return all aggregates within stream"() {
 
         given: 'Events for aggregate exists in event store for stream'
-            eventStore.findAll(STREAM_TYPE) >> [EVENT]
+            eventStore.findAll(STREAM_TYPE) >> [ AGGREGATE_ID: [EVENT] ]
 
         when: 'Search for aggregates'
             List<DummyAggregate> aggregates = repository.findAll(STREAM_TYPE)
@@ -162,7 +162,7 @@ class AggregateRepositoryUT extends Specification {
     def "findAll should return empty list when there is no events in the stream"() {
 
         given: 'Events does not exists in event store for stream'
-            eventStore.findAll(STREAM_TYPE) >> []
+            eventStore.findAll(STREAM_TYPE) >> [:]
 
         when: 'Search for aggregates'
             List<DummyAggregate> aggregates = repository.findAll(STREAM_TYPE)

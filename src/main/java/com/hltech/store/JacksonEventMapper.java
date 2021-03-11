@@ -3,7 +3,7 @@ package com.hltech.store;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class JacksonEventMapper implements EventMapper {
+public class JacksonEventMapper<E> implements EventMapper<E> {
 
     private final ObjectMapper objectMapper;
 
@@ -12,7 +12,7 @@ public class JacksonEventMapper implements EventMapper {
     }
 
     @Override
-    public <T extends Event> T stringToEvent(String eventString, Class<T> eventType) {
+    public E stringToEvent(String eventString, Class<? extends E> eventType) {
         try {
             return objectMapper.readValue(eventString, eventType);
         } catch (JsonProcessingException ex) {
@@ -21,7 +21,7 @@ public class JacksonEventMapper implements EventMapper {
     }
 
     @Override
-    public <T extends Event> String eventToString(T event) {
+    public String eventToString(E event) {
         try {
             return objectMapper.writeValueAsString(event);
         } catch (JsonProcessingException ex) {
