@@ -100,389 +100,104 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     }
 
-    def "findAggregate should return aggregate with all events applied in correct order"() {
+    def "findAll by aggregateId and streamType should return events related to aggregate and stream in correct order"() {
 
         given: 'Events exist in database'
             insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
 
-        when: 'Search for aggregate'
-            Optional<DummyAggregate> actualAggregate = postgresEventStore.findAggregate(
-                    AGGREGATE_ID,
-                    STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
+        when: 'Search for events by aggregateId and stream type'
+            def events = postgresEventStore.findAll(AGGREGATE_ID, STREAM_TYPE)
 
-        then: 'Aggregate found'
-            actualAggregate.isPresent()
+        then: 'Events found'
+            events.size() == AGGREGATE_EVENTS.size()
 
-        then: 'Events applied'
-            actualAggregate.get().appliedEvents.size() == AGGREGATE_EVENTS.size()
-
-        and: 'Events applied in correct order'
+        and: 'Events in correct order'
             AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
-                assert event == actualAggregate.get().appliedEvents[idx]
+                assert event == events[idx]
             }
 
     }
 
-    def "findAggregate should return aggregate and apply only those events which belong to given stream type"() {
+    def "findAll by aggregateId and streamType should return only events related to aggregate and stream"() {
 
-        given: 'Events for aggregate exist in database in two different streams'
+        given: 'Events exist in database for aggregate and stream type'
             insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
+
+        and: 'Events exist in database for aggregate and another stream type'
             insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
 
-        when: 'Search for aggregate in stream'
-            Optional<DummyAggregate> aggregateInStream = postgresEventStore.findAggregate(
-                    AGGREGATE_ID,
-                    STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInStream.isPresent()
-
-        and: 'Only events from stream applied on aggregate'
-            aggregateInStream.get().appliedEvents.id == [AGGREGATE_EVENTS[0].id]
-
-        when: 'Search for aggregate in another stream'
-            Optional<DummyAggregate> aggregateInAnotherStream = postgresEventStore.findAggregate(
-                    AGGREGATE_ID,
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInAnotherStream.isPresent()
-
-        and: 'Only events from another stream applied on aggregate'
-            aggregateInAnotherStream.get().appliedEvents.id == [AGGREGATE_EVENTS[1].id]
-
-    }
-
-    def "findAggregate should not return aggregate if one is in a different stream type"() {
-
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
-
-        when: 'Search aggregate in another stream type'
-            Optional<DummyAggregate> actualAggregate = postgresEventStore.findAggregate(
-                    AGGREGATE_ID,
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate not found'
-            !actualAggregate.isPresent()
-
-    }
-
-    def "getAggregate should return aggregate with all events applied in correct order"() {
-
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
-
-        when: 'Search for aggregate'
-            DummyAggregate actualAggregate = postgresEventStore.getAggregate(
-                    AGGREGATE_ID,
-                    STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            actualAggregate != null
-
-        then: 'Events applied'
-            actualAggregate.appliedEvents.size() == AGGREGATE_EVENTS.size()
-
-        and: 'Events applied in correct order'
-            AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
-                assert event == actualAggregate.appliedEvents[idx]
-            }
-
-    }
-
-    def "getAggregate should return aggregate and apply only those events which belong to given stream type"() {
-
-        given: 'Events for aggregate exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
-
-        when: 'Search for aggregate in stream'
-            DummyAggregate aggregateInStream = postgresEventStore.getAggregate(
-                    AGGREGATE_ID,
-                    STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInStream != null
-
-        and: 'Only events from stream applied on aggregate'
-            aggregateInStream.appliedEvents.id == [AGGREGATE_EVENTS[0].id]
-
-        when: 'Search for aggregate in another stream'
-            DummyAggregate aggregateInAnotherStream = postgresEventStore.getAggregate(
-                    AGGREGATE_ID,
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInAnotherStream != null
-
-        and: 'Only events from another stream applied on aggregate'
-            aggregateInAnotherStream.appliedEvents.id == [AGGREGATE_EVENTS[1].id]
-
-    }
-
-    def "getAggregate should throw exception if aggregate is in a different stream type"() {
-
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
-
-        when: 'Search aggregate in another stream type'
-            postgresEventStore.getAggregate(
-                    AGGREGATE_ID,
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate not found'
-            def ex = thrown(IllegalStateException)
-            ex.message == "Could not find aggregate with id: ${AGGREGATE_ID} in stream: ${ANOTHER_STREAM_TYPE}"
-
-    }
-
-    def "findAggregateToEvent should return aggregate with given event and all other events that occurred before applied"() {
-
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
-
-        expect: 'Only events occurred at or before given event has been applied'
-            AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
-                Optional<DummyAggregate> actualAggregate = postgresEventStore.findAggregateToEvent(
-                        event,
-                        STREAM_TYPE,
-                        DummyAggregate.INITIAL_STATE_SUPPLIER,
-                        DummyAggregate.EVENT_APPLIER
-                )
-                assert actualAggregate.isPresent()
-                assert actualAggregate.get().appliedEvents.size() == idx + 1
-            }
-
-    }
-
-    def "findAggregateToEvent should return aggregate and apply only those events which belong to given stream type"() {
-
-        given: 'Events for aggregate exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
-
-        when: 'Search for aggregate in stream'
-            Optional<DummyAggregate> aggregateInStream = postgresEventStore.findAggregateToEvent(
-                    AGGREGATE_EVENTS[0],
-                    STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInStream.isPresent()
-
-        and: 'Only events from stream applied on aggregate'
-            aggregateInStream.get().appliedEvents.id == [AGGREGATE_EVENTS[0].id]
-
-        when: 'Search for aggregate in another stream'
-            Optional<DummyAggregate> aggregateInAnotherStream = postgresEventStore.findAggregateToEvent(
-                    AGGREGATE_EVENTS[1],
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInAnotherStream.isPresent()
-
-        and: 'Only events from another stream applied on aggregate'
-            aggregateInAnotherStream.get().appliedEvents.id == [AGGREGATE_EVENTS[1].id]
-
-    }
-
-    def "findAggregateToEvent should not return aggregate if one is in a different stream type"() {
-
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
-
-        when: 'Search aggregate in another stream type'
-            Optional<DummyAggregate> actualAggregate = postgresEventStore.findAggregateToEvent(
-                    AGGREGATE_EVENTS.last(),
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate not found'
-            !actualAggregate.isPresent()
-
-    }
-
-    def "getAggregateToEvent should return aggregate with given event and all other events that occurred before applied"() {
-
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
-
-        expect: 'Only events occurred at or before given event has been applied'
-            AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
-                DummyAggregate actualAggregate = postgresEventStore.getAggregateToEvent(
-                        event,
-                        STREAM_TYPE,
-                        DummyAggregate.INITIAL_STATE_SUPPLIER,
-                        DummyAggregate.EVENT_APPLIER
-                )
-                assert actualAggregate
-                assert actualAggregate.appliedEvents.size() == idx + 1
-            }
-
-    }
-
-    def "getAggregateToEvent should return aggregate and apply only those events which belong to given stream type"() {
-
-        given: 'Events for aggregate exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
-
-        when: 'Search for aggregate in stream'
-            DummyAggregate aggregateInStream = postgresEventStore.getAggregateToEvent(
-                    AGGREGATE_EVENTS[0],
-                    STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInStream != null
-
-        and: 'Only events from stream applied on aggregate'
-            aggregateInStream.appliedEvents.id == [AGGREGATE_EVENTS[0].id]
-
-        when: 'Search for aggregate in another stream'
-            DummyAggregate aggregateInAnotherStream = postgresEventStore.getAggregateToEvent(
-                    AGGREGATE_EVENTS[1],
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInAnotherStream != null
-
-        and: 'Only events from another stream applied on aggregate'
-            aggregateInAnotherStream.appliedEvents.id == [AGGREGATE_EVENTS[1].id]
-
-    }
-
-    def "getAggregateToEvent should throw exception if aggregate is in another stream type"() {
-
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
-
-        when: 'Search aggregate in another stream type'
-            postgresEventStore.getAggregateToEvent(
-                    AGGREGATE_EVENTS.last(),
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Exception thrown'
-            def ex = thrown(IllegalStateException)
-
-        and: 'Message as expected'
-            ex.message == "Could not find aggregate to event with id: ${AGGREGATE_EVENTS.last().id} in stream: ${ANOTHER_STREAM_TYPE}"
-
-    }
-
-    def "findAllAggregate should return all aggregates by given stream type"() {
-
-        given: 'Events for two aggregates exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
+        and: 'Events exist in database for another aggregate and stream type'
             insertEventsToDatabase(ANOTHER_AGGREGATE_EVENTS, STREAM_TYPE)
 
-        when: 'Search for aggregate'
-            List<DummyAggregate> aggregates = postgresEventStore.findAllAggregate(
-                    STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
+        when: 'Search for events by aggregateId and stream type'
+            def events = postgresEventStore.findAll(AGGREGATE_ID, STREAM_TYPE)
 
-        then: 'Aggregates found'
-            aggregates.size() == 2
-
-        and: 'Events applied in correct order for both aggregates'
-            AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
-                assert event == aggregates[0].appliedEvents[idx]
-            }
-            ANOTHER_AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
-                assert event == aggregates[1].appliedEvents[idx]
-            }
-    }
-
-    def "findAllAggregate should return aggregate and apply only those events which belong to given stream type"() {
-
-        given: 'Events for aggregate exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
-
-        when: 'Search for aggregate in stream'
-            List<DummyAggregate> aggregateInStream = postgresEventStore.findAllAggregate(
-                    STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInStream.size() == 1
-
-        and: 'Only events from stream applied on aggregate'
-            aggregateInStream[0].appliedEvents.id == [AGGREGATE_EVENTS[0].id]
-
-        when: 'Search for aggregate in another stream'
-            List<DummyAggregate> aggregateInAnotherStream = postgresEventStore.findAllAggregate(
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
-            )
-
-        then: 'Aggregate found'
-            aggregateInAnotherStream.size() == 1
-
-        and: 'Only events from another stream applied on aggregate'
-            aggregateInAnotherStream[0].appliedEvents.id == [AGGREGATE_EVENTS[1].id]
+        then: 'Only events for aggregate and stream type returned'
+            events == [AGGREGATE_EVENTS[0]]
 
     }
 
-    def "findAllAggregate should not return aggregate if one is in a different stream type"() {
+    def "findAllToEvent should return given event and all other events that occurred before"() {
 
         given: 'Events exist in database'
             insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
 
-        when: 'Search aggregate in another stream type'
-            List<DummyAggregate> actualAggregate = postgresEventStore.findAllAggregate(
-                    ANOTHER_STREAM_TYPE,
-                    DummyAggregate.INITIAL_STATE_SUPPLIER,
-                    DummyAggregate.EVENT_APPLIER
+        expect: 'Only events occurred at or before given event has been returned'
+            AGGREGATE_EVENTS.eachWithIndex { Event event, int idx ->
+                List<DummyEvent> events = postgresEventStore.findAllToEvent(
+                        event,
+                        STREAM_TYPE
+                )
+                assert events.size() == idx + 1
+            }
+
+    }
+
+    def "findAllToEvent should return only those events which belong to given stream type"() {
+
+        given: 'Events exist in database in two different streams'
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
+            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
+
+        when: 'Search for events in stream'
+            List<DummyEvent> events = postgresEventStore.findAllToEvent(
+                    AGGREGATE_EVENTS[0],
+                    STREAM_TYPE
             )
 
-        then: 'Aggregate not found'
-            actualAggregate.isEmpty()
+        then: 'Events found'
+            !events.empty
+
+        and: 'Only events from stream returned'
+            events.id == [AGGREGATE_EVENTS[0].id]
+
+        when: 'Search for events in another stream'
+            List<DummyEvent> eventsInAnotherStream = postgresEventStore.findAllToEvent(
+                    AGGREGATE_EVENTS[1],
+                    ANOTHER_STREAM_TYPE
+            )
+
+        then: 'Events found'
+            !eventsInAnotherStream.empty
+
+        and: 'Only events from another stream returned'
+            eventsInAnotherStream.id == [AGGREGATE_EVENTS[1].id]
+
+    }
+
+    def "findAllToEvent should not return events when those are in a different stream type"() {
+
+        given: 'Events exist in database'
+            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
+
+        when: 'Search for events in another stream type'
+            List<DummyEvent> events = postgresEventStore.findAllToEvent(
+                    AGGREGATE_EVENTS.last(),
+                    ANOTHER_STREAM_TYPE
+            )
+
+        then: 'Events not found'
+            events.empty
 
     }
 
