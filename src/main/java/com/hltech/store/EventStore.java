@@ -1,10 +1,7 @@
 package com.hltech.store;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.function.BiFunction;
-import java.util.function.Supplier;
 
 public interface EventStore {
 
@@ -17,38 +14,8 @@ public interface EventStore {
 
     List<Event> findAll(String streamType);
 
-    <T> Optional<T> findAggregate(
-            UUID aggregateId,
-            String streamType,
-            Supplier<T> initialAggregateStateSupplier,
-            BiFunction<T, Event, T> eventApplier
-    );
+    List<Event> findAll(UUID aggregateId, String streamType);
 
-    <T> T getAggregate(
-            UUID aggregateId,
-            String streamType,
-            Supplier<T> initialAggregateStateSupplier,
-            BiFunction<T, Event, T> eventApplier
-    );
-
-    <T> Optional<T> findAggregateToEvent(
-            Event toEvent,
-            String streamType,
-            Supplier<T> initialAggregateStateSupplier,
-            BiFunction<T, Event, T> eventApplier
-    );
-
-    <T> T getAggregateToEvent(
-            Event toEvent,
-            String streamType,
-            Supplier<T> initialAggregateStateSupplier,
-            BiFunction<T, Event, T> eventApplier
-    );
-
-    <T> List<T> findAllAggregate(
-            String streamType,
-            Supplier<T> initialAggregateStateSupplier,
-            BiFunction<T, Event, T> eventApplier
-    );
+    List<Event> findAllToEvent(Event toEvent, String streamType);
 
 }
