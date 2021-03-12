@@ -20,9 +20,24 @@ import static java.util.stream.Collectors.groupingBy;
 @RequiredArgsConstructor
 public class PostgresEventStore<E> implements EventStore<E> {
 
-    private static final String PAYLOAD_COLUMN = "payload";
-    private static final String EVENT_NAME_COLUMN = "event_name";
-    private static final String EVENT_VERSION_COLUMN = "event_version";
+    public static final String SAVE_EVENT_QUERY = "insert into event(id, aggregate_id, stream_type, payload, event_name, event_version) "
+            + "VALUES(?::uuid, ?::uuid, ?, ?::JSONB, ?, ?)";
+    public static final String FIND_ALL_BY_AGGREGATE_ID_QUERY = "SELECT payload, event_name, event_version "
+            + "FROM event "
+            + "where aggregate_id = ?::UUID "
+            + "ORDER BY order_of_occurrence ASC";
+    public static final String FIND_ALL_BY_STREAM_TYPE_QUERY = "SELECT payload, event_name, event_version "
+            + "FROM event where stream_type = ? "
+            + "ORDER BY order_of_occurrence ASC";
+    public static final String FIND_ALL_BY_AGGREGATE_ID_AND_STREAM_TYPE_QUERY = "SELECT payload, event_name, event_version "
+            + "FROM event "
+            + "where aggregate_id = ?::UUID and stream_type = ? "
+            + "ORDER BY order_of_occurrence ASC";
+    public static final String FIND_ALL_FOR_EVENT_QUERY = "SELECT payload, event_name, event_version "
+            + "FROM event "
+            + "where aggregate_id = ?::UUID and stream_type = ? "
+            + "and order_of_occurrence <= (select order_of_occurrence from event where id = ?::UUID) "
+            + "ORDER BY order_of_occurrence ASC";
 
     private final Function<E, UUID> eventIdExtractor;
     private final Function<E, UUID> aggregateIdExtractor;
@@ -35,12 +50,9 @@ public class PostgresEventStore<E> implements EventStore<E> {
             E event,
             String streamType
     ) {
-        String query = "insert into event(id, aggregate_id, stream_type, payload, event_name, event_version) "
-                + "VALUES(?::uuid, ?::uuid, ?, ?::JSONB, ?, ?)";
-
         try (
                 Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(query)
+                PreparedStatement pst = con.prepareStatement(SAVE_EVENT_QUERY)
         ) {
             pst.setObject(1, eventIdExtractor.apply(event));
             pst.setObject(2, aggregateIdExtractor.apply(event));
@@ -51,7 +63,7 @@ public class PostgresEventStore<E> implements EventStore<E> {
 
             pst.executeUpdate();
         } catch (SQLException ex) {
-            log.error(
+            throw new EventStoreException(
                     String.format("Could not save event to database with aggregateId %s  in stream %s", aggregateIdExtractor.apply(event), streamType),
                     ex
             );
@@ -60,114 +72,88 @@ public class PostgresEventStore<E> implements EventStore<E> {
 
     @Override
     public List<E> findAll(UUID aggregateId) {
-        String query = "SELECT payload, event_name, event_version FROM event where aggregate_id = ?::UUID ORDER BY order_of_occurrence ASC";
-
-        List<E> result = new ArrayList<>();
-
         try (
                 Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(query)
+                PreparedStatement pst = con.prepareStatement(FIND_ALL_BY_AGGREGATE_ID_QUERY)
         ) {
             pst.setObject(1, aggregateId);
             ResultSet rs = pst.executeQuery();
 
-            while (rs.next()) {
-                Class<? extends E> eventType = eventTypeMapper.toType(
-                        rs.getString(EVENT_NAME_COLUMN),
-                        rs.getShort(EVENT_VERSION_COLUMN)
-                );
-                E event = eventMapper.stringToEvent(rs.getString(PAYLOAD_COLUMN), eventType);
-                result.add(event);
-            }
+            return extractEventsFromResultSet(rs);
         } catch (SQLException ex) {
-            log.error(String.format("Could not find events for aggregate %s", aggregateId), ex);
+            throw new EventStoreException(
+                    String.format("Could not find events for aggregate %s", aggregateId), ex
+            );
         }
-        return result;
     }
 
     @Override
     public Map<UUID, List<E>> findAll(String streamType) {
-        String query = "SELECT payload, event_name, event_version FROM event where stream_type = ? ORDER BY order_of_occurrence ASC";
-
-        List<E> result = new ArrayList<>();
-
         try (
                 Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(query)
+                PreparedStatement pst = con.prepareStatement(FIND_ALL_BY_STREAM_TYPE_QUERY)
         ) {
             pst.setObject(1, streamType);
             ResultSet rs = pst.executeQuery();
 
-            while (rs.next()) {
-                Class<? extends E> eventType = eventTypeMapper.toType(
-                        rs.getString(EVENT_NAME_COLUMN),
-                        rs.getShort(EVENT_VERSION_COLUMN)
-                );
-                E event = eventMapper.stringToEvent(rs.getObject(PAYLOAD_COLUMN).toString(), eventType);
-                result.add(event);
-            }
+            List<E> result = extractEventsFromResultSet(rs);
+            return result.stream().collect(groupingBy(aggregateIdExtractor));
         } catch (SQLException ex) {
-            log.error(String.format("Could not find events for stream %s", streamType), ex);
+            throw new EventStoreException(
+                    String.format("Could not find events for stream %s", streamType), ex
+            );
         }
-        return result.stream().collect(groupingBy(aggregateIdExtractor));
     }
 
     @Override
     public List<E> findAll(UUID aggregateId, String streamType) {
-        String query = "SELECT payload, event_name, event_version FROM event where aggregate_id = ?::UUID and stream_type = ? ORDER BY order_of_occurrence ASC";
-
-        List<E> result = new ArrayList<>();
-
         try (
                 Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(query)
+                PreparedStatement pst = con.prepareStatement(FIND_ALL_BY_AGGREGATE_ID_AND_STREAM_TYPE_QUERY)
         ) {
             pst.setObject(1, aggregateId);
             pst.setObject(2, streamType);
             ResultSet rs = pst.executeQuery();
 
-            while (rs.next()) {
-                Class<? extends E> eventType = eventTypeMapper.toType(
-                        rs.getString(EVENT_NAME_COLUMN),
-                        rs.getShort(EVENT_VERSION_COLUMN)
-                );
-                E event = eventMapper.stringToEvent(rs.getObject(PAYLOAD_COLUMN).toString(), eventType);
-                result.add(event);
-            }
+            return extractEventsFromResultSet(rs);
         } catch (SQLException ex) {
-            log.error(String.format("Could not find events for aggregate %s and stream %s", aggregateId, streamType), ex);
+            throw new EventStoreException(
+                    String.format("Could not find events for aggregate %s and stream %s", aggregateId, streamType), ex
+            );
         }
-        return result;
     }
 
     @Override
     public List<E> findAllToEvent(E toEvent, String streamType) {
-        String query = "SELECT payload, event_name, event_version FROM event where aggregate_id = ?::UUID and stream_type = ? "
-                + " and order_of_occurrence <= (select order_of_occurrence from event where id = ?::UUID)"
-                + " ORDER BY order_of_occurrence ASC";
-
-        List<E> result = new ArrayList<>();
-
         try (
                 Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(query)
+                PreparedStatement pst = con.prepareStatement(FIND_ALL_FOR_EVENT_QUERY)
         ) {
             pst.setObject(1, aggregateIdExtractor.apply(toEvent));
             pst.setObject(2, streamType);
             pst.setObject(3, eventIdExtractor.apply(toEvent));
             ResultSet rs = pst.executeQuery();
 
-            while (rs.next()) {
-                Class<? extends E> eventType = eventTypeMapper.toType(
-                        rs.getString(EVENT_NAME_COLUMN),
-                        rs.getShort(EVENT_VERSION_COLUMN)
-                );
-                E event = eventMapper.stringToEvent(rs.getObject(PAYLOAD_COLUMN).toString(), eventType);
-                result.add(event);
-            }
+            return extractEventsFromResultSet(rs);
         } catch (SQLException ex) {
-            log.error(String.format("Could not find events to event id %s for aggregate %s and stream %s",
-                    eventIdExtractor.apply(toEvent), aggregateIdExtractor.apply(toEvent), streamType), ex);
+            throw new EventStoreException(
+                    String.format("Could not find events to event id %s for aggregate %s and stream %s",
+                            eventIdExtractor.apply(toEvent), aggregateIdExtractor.apply(toEvent), streamType),
+                    ex
+            );
+        }
+    }
+
+    private List<E> extractEventsFromResultSet(ResultSet rs) throws SQLException {
+        List<E> result = new ArrayList<>();
+
+        while (rs.next()) {
+            Class<? extends E> eventType = eventTypeMapper.toType(
+                    rs.getString("event_name"),
+                    rs.getShort("event_version")
+            );
+            E event = eventMapper.stringToEvent(rs.getObject("payload").toString(), eventType);
+            result.add(event);
         }
         return result;
     }
