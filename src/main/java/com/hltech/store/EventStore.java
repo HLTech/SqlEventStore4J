@@ -8,15 +8,15 @@ public interface EventStore<E> {
 
     void save(
             E event,
-            String streamType
+            String streamName
     );
 
     List<E> findAll(UUID aggregateId);
 
-    Map<UUID, List<E>> findAll(String streamType);
+    Map<UUID, List<E>> findAll(String streamName);
 
-    List<E> findAll(UUID aggregateId, String streamType);
+    List<E> findAll(UUID aggregateId, String streamName);
 
-    List<E> findAllToEvent(E toEvent, String streamType);
+    List<E> findAllToEvent(E toEvent, String streamName);
 
 }
