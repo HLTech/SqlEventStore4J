@@ -3,11 +3,11 @@ package com.hltech.store;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class JacksonEventMapper<E> implements EventMapper<E> {
+public class JacksonEventBodyMapper<E> implements EventBodyMapper<E> {
 
     private final ObjectMapper objectMapper;
 
-    public JacksonEventMapper(ObjectMapper objectMapper) {
+    public JacksonEventBodyMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 

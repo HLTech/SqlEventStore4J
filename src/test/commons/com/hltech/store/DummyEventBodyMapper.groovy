@@ -2,7 +2,7 @@ package com.hltech.store
 
 import groovy.json.JsonSlurper
 
-class DummyEventMapper implements EventMapper<DummyBaseEvent> {
+class DummyEventBodyMapper implements EventBodyMapper<DummyBaseEvent> {
 
     static SLURPER = new JsonSlurper()
 
