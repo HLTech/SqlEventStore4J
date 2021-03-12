@@ -23,7 +23,6 @@ repositories(repos)
 apply from: 'gradle/test.gradle'
 apply from: 'gradle/codequality.gradle'
 
-
 sourceCompatibility = 11
 targetCompatibility = 11
 
@@ -36,3 +35,90 @@ dependencies {
     compileOnly "org.projectlombok:lombok:1.18.16"
     annotationProcessor "org.projectlombok:lombok:1.18.16"
 }
+
+//https://central.sonatype.org/pages/gradle.html
+javadoc {
+    failOnError false
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    archiveClassifier = 'javadoc'
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    archiveClassifier = 'sources'
+}
+
+artifacts {
+    archives javadocJar, sourcesJar
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from(components.java)
+            artifact sourcesJar
+            artifact javadocJar
+            pom {
+                version = project.version
+                artifactId  = project.name
+                name = project.name
+                groupId = project.group
+                packaging = 'jar'
+
+                description = 'Event store library to use with rdmbs database'
+                url = 'https://github.com/HLTech/SqlEventStore4J'
+                inceptionYear = '2018'
+
+                scm {
+                    connection = 'scm:git:https://github.com/HLTech/SqlEventStore4J.git'
+                    developerConnection = 'scm:git:git@github.com:HLTech/SqlEventStore4J.git'
+                    url = 'https://github.com/HLTech/SqlEventStore4J.git'
+                }
+
+                licenses {
+                    license {
+                        name = 'The MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'pienikrz'
+                        name = 'Krzysztof Pieniążek'
+                        email = 'pieniazek.krzysiek@gmail.com'
+                    }
+                    developer {
+                        id = 'rydlu'
+                        name = 'Zbigniew Rydlewski'
+                        email = 'zbigniew@rydlewski.pl'
+                    }
+                    developer {
+                        id = 'michalkarolik'
+                        name = 'Michał Karolik'
+                        email = 'karolik.m@gmail.com'
+                    }
+                }
+            }
+        }
+    }
+}
+
+if (project.hasProperty("signing.keyId")) {
+    signing {
+        sign publishing.publications.mavenJava
+    }
+}
+
+nexusStaging {
+    packageGroup project.group
+    username System.getenv('SONATYPE_USER')
+    password System.getenv('SONATYPE_PASSWORD')
+    stagingProfileId = '8932a92dff8c84'
+    numberOfRetries = 5
+    delayBetweenRetriesInMillis = 60000
+}
+
