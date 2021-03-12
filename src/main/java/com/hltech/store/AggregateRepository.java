@@ -6,7 +6,6 @@ import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
-import static io.vavr.collection.Stream.ofAll;
 import static java.util.stream.Collectors.toList;
 
 public class AggregateRepository<A, E> {
@@ -41,7 +40,7 @@ public class AggregateRepository<A, E> {
 
     public A get(UUID aggregateId) {
         return find(aggregateId)
-                .orElseThrow(() -> new IllegalStateException("Could not find aggregate with id: " + aggregateId + " in stream: " + streamType));
+                .orElseThrow(() -> new AggregateRepositoryException("Could not find aggregate with id: " + aggregateId + " in stream: " + streamType));
     }
 
     public Optional<A> findToEvent(E toEvent) {
@@ -51,7 +50,7 @@ public class AggregateRepository<A, E> {
 
     public A getToEvent(E toEvent) {
         return findToEvent(toEvent)
-                .orElseThrow(() -> new IllegalStateException("Could not find aggregate to event: " + toEvent + " in stream: " + streamType));
+                .orElseThrow(() -> new AggregateRepositoryException("Could not find aggregate to event: " + toEvent + " in stream: " + streamType));
     }
 
     public List<A> findAll(String streamType) {
@@ -68,7 +67,12 @@ public class AggregateRepository<A, E> {
         if (events.isEmpty()) {
             return Optional.empty();
         } else {
-            A aggregate = ofAll(events).foldLeft(initialAggregateStateSupplier.get(), eventApplier);
+
+            A aggregate = initialAggregateStateSupplier.get();
+            for (E event : events) {
+                aggregate = eventApplier.apply(aggregate, event);
+            }
+
             return Optional.of(aggregate);
         }
     }

@@ -79,7 +79,7 @@ class AggregateRepositoryUT extends Specification {
             repository.get(AGGREGATE_ID)
 
         then: 'Exception thrown'
-            def ex = thrown(IllegalStateException)
+            def ex = thrown(AggregateRepositoryException)
             ex.message == "Could not find aggregate with id: $AGGREGATE_ID in stream: $STREAM_TYPE"
 
     }
@@ -138,7 +138,7 @@ class AggregateRepositoryUT extends Specification {
             repository.getToEvent(EVENT)
 
         then: 'Exception thrown'
-            def ex = thrown(IllegalStateException)
+            def ex = thrown(AggregateRepositoryException)
             ex.message == "Could not find aggregate to event: $EVENT in stream: $STREAM_TYPE"
 
     }
