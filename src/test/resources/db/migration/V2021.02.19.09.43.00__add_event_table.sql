@@ -6,7 +6,7 @@ create table event
     aggregate_id        uuid      not null,
     payload             jsonb     not null,
     order_of_occurrence bigserial not null,
-    stream_type         varchar   not null,
+    stream_name         varchar   not null,
     event_name          varchar   not null,
     event_version       smallint  not null
 );

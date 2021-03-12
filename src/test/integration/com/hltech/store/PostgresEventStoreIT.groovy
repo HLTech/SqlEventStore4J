@@ -21,7 +21,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
     def "save should be able to save events in database"() {
 
         when: 'Events saved'
-            AGGREGATE_EVENTS.each { postgresEventStore.save(it, STREAM_TYPE) }
+            AGGREGATE_EVENTS.each { postgresEventStore.save(it, STREAM_NAME) }
 
         then: 'All events exist in database'
             def rows = dbClient.rows("select * from event where aggregate_id = '${AGGREGATE_ID}' order by order_of_occurrence asc".toString())
@@ -32,7 +32,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
                 assert rows[idx]['aggregate_id'] == event.aggregateId
                 assert rows[idx]['payload'].toString().replaceAll(" ", "") == eventBodyMapper.eventToString(event).replaceAll(" ", "")
                 assert rows[idx]['order_of_occurrence'] != null
-                assert rows[idx]['stream_type'] == STREAM_TYPE
+                assert rows[idx]['stream_name'] == STREAM_NAME
                 assert rows[idx]['event_name'] == "DummyEvent"
                 assert rows[idx]['event_version'] == 1
             }
@@ -42,8 +42,8 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
     def "findAll by aggregateId should return all events related to aggregate in correct order across all streams"() {
 
         given: 'Events exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_NAME)
+            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_NAME)
 
         when: 'Search for events by aggregateId'
             def events = postgresEventStore.findAll(AGGREGATE_ID)
@@ -61,8 +61,8 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
     def "findAll by aggregateId should not return events when events for given aggregate not exist"() {
 
         given: 'Events exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_NAME)
+            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_NAME)
 
         when: 'Search for events by another aggregateId'
             def events = postgresEventStore.findAll(ANOTHER_AGGREGATE_ID)
@@ -72,14 +72,14 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     }
 
-    def "findAll by stream type should return all events in the stream in correct order"() {
+    def "findAll by stream name should return all events in the stream in correct order"() {
 
         given: 'Events for two different aggregates exist in database in single streams'
             def ALL_EVENTS = AGGREGATE_EVENTS + ANOTHER_AGGREGATE_EVENTS
-            insertEventsToDatabase(ALL_EVENTS, STREAM_TYPE)
+            insertEventsToDatabase(ALL_EVENTS, STREAM_NAME)
 
-        when: 'Search for events by stream type'
-            def events = postgresEventStore.findAll(STREAM_TYPE)
+        when: 'Search for events by stream name'
+            def events = postgresEventStore.findAll(STREAM_NAME)
 
         then: 'Events found for aggregate'
             events[AGGREGATE_ID].size() == AGGREGATE_EVENTS.size()
@@ -97,32 +97,32 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
                 assert event == events[ANOTHER_AGGREGATE_ID][idx]
             }
 
-        and: 'Zero event found in another stream type'
-            postgresEventStore.findAll(ANOTHER_STREAM_TYPE).isEmpty()
+        and: 'Zero event found in another stream name'
+            postgresEventStore.findAll(ANOTHER_STREAM_NAME).isEmpty()
 
     }
 
-    def "findAll by stream type should not return events when events are in a different stream type"() {
+    def "findAll by stream name should not return events when events are in a different stream name"() {
 
         given: 'Events for two different aggregates exist in database in single streams'
             def ALL_EVENTS = AGGREGATE_EVENTS + ANOTHER_AGGREGATE_EVENTS
-            insertEventsToDatabase(ALL_EVENTS, STREAM_TYPE)
+            insertEventsToDatabase(ALL_EVENTS, STREAM_NAME)
 
-        when: 'Search for events by another stream type'
-            def events = postgresEventStore.findAll(ANOTHER_STREAM_TYPE)
+        when: 'Search for events by another stream name'
+            def events = postgresEventStore.findAll(ANOTHER_STREAM_NAME)
 
         then: 'Events not found'
             events.isEmpty()
 
     }
 
-    def "findAll by aggregateId and streamType should return events related to aggregate and stream in correct order"() {
+    def "findAll by aggregateId and streamName should return events related to aggregate and stream in correct order"() {
 
         given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
+            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_NAME)
 
-        when: 'Search for events by aggregateId and stream type'
-            def events = postgresEventStore.findAll(AGGREGATE_ID, STREAM_TYPE)
+        when: 'Search for events by aggregateId and stream name'
+            def events = postgresEventStore.findAll(AGGREGATE_ID, STREAM_NAME)
 
         then: 'Events found'
             events.size() == AGGREGATE_EVENTS.size()
@@ -134,21 +134,21 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     }
 
-    def "findAll by aggregateId and streamType should return only events related to aggregate and stream"() {
+    def "findAll by aggregateId and streamName should return only events related to aggregate and stream"() {
 
-        given: 'Events exist in database for aggregate and stream type'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
+        given: 'Events exist in database for aggregate and stream name'
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_NAME)
 
-        and: 'Events exist in database for aggregate and another stream type'
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
+        and: 'Events exist in database for aggregate and another stream name'
+            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_NAME)
 
-        and: 'Events exist in database for another aggregate and stream type'
-            insertEventsToDatabase(ANOTHER_AGGREGATE_EVENTS, STREAM_TYPE)
+        and: 'Events exist in database for another aggregate and stream name'
+            insertEventsToDatabase(ANOTHER_AGGREGATE_EVENTS, STREAM_NAME)
 
-        when: 'Search for events by aggregateId and stream type'
-            def events = postgresEventStore.findAll(AGGREGATE_ID, STREAM_TYPE)
+        when: 'Search for events by aggregateId and stream name'
+            def events = postgresEventStore.findAll(AGGREGATE_ID, STREAM_NAME)
 
-        then: 'Only events for aggregate and stream type returned'
+        then: 'Only events for aggregate and stream name returned'
             events == [AGGREGATE_EVENTS[0]]
 
     }
@@ -156,29 +156,29 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
     def "findAllToEvent should return given event and all other events that occurred before"() {
 
         given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
+            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_NAME)
 
         expect: 'Only events occurred at or before given event has been returned'
             AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
                 List<DummyEvent> events = postgresEventStore.findAllToEvent(
                         event,
-                        STREAM_TYPE
+                        STREAM_NAME
                 )
                 assert events.size() == idx + 1
             }
 
     }
 
-    def "findAllToEvent should return only those events which belong to given stream type"() {
+    def "findAllToEvent should return only those events which belong to given stream name"() {
 
         given: 'Events exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_TYPE)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_TYPE)
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_NAME)
+            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_NAME)
 
         when: 'Search for events in stream'
             List<DummyEvent> events = postgresEventStore.findAllToEvent(
                     AGGREGATE_EVENTS[0],
-                    STREAM_TYPE
+                    STREAM_NAME
             )
 
         then: 'Events found'
@@ -190,7 +190,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
         when: 'Search for events in another stream'
             List<DummyEvent> eventsInAnotherStream = postgresEventStore.findAllToEvent(
                     AGGREGATE_EVENTS[1],
-                    ANOTHER_STREAM_TYPE
+                    ANOTHER_STREAM_NAME
             )
 
         then: 'Events found'
@@ -201,15 +201,15 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     }
 
-    def "findAllToEvent should not return events when those are in a different stream type"() {
+    def "findAllToEvent should not return events when those are in a different stream name"() {
 
         given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_TYPE)
+            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_NAME)
 
-        when: 'Search for events in another stream type'
+        when: 'Search for events in another stream name'
             List<DummyEvent> events = postgresEventStore.findAllToEvent(
                     AGGREGATE_EVENTS.last(),
-                    ANOTHER_STREAM_TYPE
+                    ANOTHER_STREAM_NAME
             )
 
         then: 'Events not found'
@@ -219,13 +219,13 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     private void insertEventsToDatabase(
             List<DummyBaseEvent> events,
-            String streamType
+            String streamName
     ) {
         events.each { DummyBaseEvent event ->
             String payload = eventBodyMapper.eventToString(event)
             dbClient.execute(
-                    "INSERT INTO EVENT (ID, AGGREGATE_ID, PAYLOAD, STREAM_TYPE, EVENT_NAME, EVENT_VERSION) VALUES (?::UUID, ?::UUID, ?::JSONB, ?, ?, ?)",
-                    [event.id, event.aggregateId, payload, streamType, "DummyEvent", 1]
+                    "INSERT INTO EVENT (ID, AGGREGATE_ID, PAYLOAD, STREAM_NAME, EVENT_NAME, EVENT_VERSION) VALUES (?::UUID, ?::UUID, ?::JSONB, ?, ?, ?)",
+                    [event.id, event.aggregateId, payload, streamName, "DummyEvent", 1]
             )
         }
     }
@@ -244,7 +244,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
             new DummyEvent(ANOTHER_AGGREGATE_ID),
             new DummyEvent(ANOTHER_AGGREGATE_ID)
     ]
-    static STREAM_TYPE = randomAlphanumeric(5)
-    static ANOTHER_STREAM_TYPE = randomAlphanumeric(5)
+    static STREAM_NAME = randomAlphanumeric(5)
+    static ANOTHER_STREAM_NAME = randomAlphanumeric(5)
 
 }
