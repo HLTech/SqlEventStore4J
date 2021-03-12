@@ -42,7 +42,7 @@ public class PostgresEventStore<E> implements EventStore<E> {
     private final Function<E, UUID> eventIdExtractor;
     private final Function<E, UUID> aggregateIdExtractor;
     private final EventTypeMapper<E> eventTypeMapper;
-    private final EventMapper<E> eventMapper;
+    private final EventBodyMapper<E> eventBodyMapper;
     private final DataSource dataSource;
 
     @Override
@@ -57,7 +57,7 @@ public class PostgresEventStore<E> implements EventStore<E> {
             pst.setObject(1, eventIdExtractor.apply(event));
             pst.setObject(2, aggregateIdExtractor.apply(event));
             pst.setString(3, streamType);
-            pst.setObject(4, eventMapper.eventToString(event));
+            pst.setObject(4, eventBodyMapper.eventToString(event));
             pst.setObject(5, eventTypeMapper.toName((Class<? extends E>) event.getClass()));
             pst.setObject(6, eventTypeMapper.toVersion((Class<? extends E>) event.getClass()));
 
@@ -152,7 +152,7 @@ public class PostgresEventStore<E> implements EventStore<E> {
                     rs.getString("event_name"),
                     rs.getShort("event_version")
             );
-            E event = eventMapper.stringToEvent(rs.getObject("payload").toString(), eventType);
+            E event = eventBodyMapper.stringToEvent(rs.getObject("payload").toString(), eventType);
             result.add(event);
         }
         return result;

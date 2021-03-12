@@ -1,6 +1,6 @@
 package com.hltech.store;
 
-public interface EventMapper<T> {
+public interface EventBodyMapper<T> {
 
     T stringToEvent(String eventString, Class<? extends T> eventType);
 

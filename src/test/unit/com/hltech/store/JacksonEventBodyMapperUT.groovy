@@ -5,12 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import spock.lang.Specification
 import spock.lang.Subject
 
-class JacksonEventMapperUT extends Specification {
+class JacksonEventBodyMapperUT extends Specification {
 
     ObjectMapper objectMapper = Mock()
 
     @Subject
-    def jacksonEventMapper = new JacksonEventMapper<DummyBaseEvent>(objectMapper)
+    def jacksonEventBodyMapper = new JacksonEventBodyMapper<DummyBaseEvent>(objectMapper)
 
 
     def "eventToString should call objectMapper.writeValueAsString method and propagate its response"() {
@@ -25,7 +25,7 @@ class JacksonEventMapperUT extends Specification {
             objectMapper.writeValueAsString(event) >> expectedJson
 
         when: 'Map event to json'
-            def actualJson = jacksonEventMapper.eventToString(event)
+            def actualJson = jacksonEventBodyMapper.eventToString(event)
 
         then: 'Json as expected'
             actualJson == expectedJson
@@ -41,7 +41,7 @@ class JacksonEventMapperUT extends Specification {
             objectMapper.writeValueAsString(event) >> { throw new JsonProcessingException('') }
 
         when: 'Map event to json'
-            jacksonEventMapper.eventToString(event)
+            jacksonEventBodyMapper.eventToString(event)
 
         then: 'Json as expected'
             def ex = thrown(IllegalStateException)
@@ -60,7 +60,7 @@ class JacksonEventMapperUT extends Specification {
             objectMapper.readValue(json, DummyEvent) >> expectedEvent
 
         when: 'Map json to event'
-            def actualEvent = jacksonEventMapper.stringToEvent(json, DummyEvent)
+            def actualEvent = jacksonEventBodyMapper.stringToEvent(json, DummyEvent)
 
         then: 'Event as expected'
             actualEvent == expectedEvent
@@ -76,7 +76,7 @@ class JacksonEventMapperUT extends Specification {
             objectMapper.readValue(json, DummyEvent) >> { throw new JsonProcessingException('') }
 
         when: 'Map json to event'
-            jacksonEventMapper.stringToEvent(json, DummyEvent)
+            jacksonEventBodyMapper.stringToEvent(json, DummyEvent)
 
         then: 'Json as expected'
             def ex = thrown(IllegalStateException)

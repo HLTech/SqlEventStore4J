@@ -7,14 +7,14 @@ import static org.testcontainers.shaded.org.apache.commons.lang.RandomStringUtil
 class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     def eventTypeMapper = new DummyEventTypeMapper()
-    def eventMapper = new DummyEventMapper()
+    def eventBodyMapper = new DummyEventBodyMapper()
 
     @Subject
     def postgresEventStore = new PostgresEventStore(
             DummyBaseEvent.EVENT_ID_EXTRACTOR,
             DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
             eventTypeMapper,
-            eventMapper,
+            eventBodyMapper,
             dataSource
     )
 
@@ -30,7 +30,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
             AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
                 assert rows[idx]['id'] == event.id
                 assert rows[idx]['aggregate_id'] == event.aggregateId
-                assert rows[idx]['payload'].toString().replaceAll(" ", "") == eventMapper.eventToString(event).replaceAll(" ", "")
+                assert rows[idx]['payload'].toString().replaceAll(" ", "") == eventBodyMapper.eventToString(event).replaceAll(" ", "")
                 assert rows[idx]['order_of_occurrence'] != null
                 assert rows[idx]['stream_type'] == STREAM_TYPE
                 assert rows[idx]['event_name'] == "DummyEvent"
@@ -222,7 +222,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
             String streamType
     ) {
         events.each { DummyBaseEvent event ->
-            String payload = eventMapper.eventToString(event)
+            String payload = eventBodyMapper.eventToString(event)
             dbClient.execute(
                     "INSERT INTO EVENT (ID, AGGREGATE_ID, PAYLOAD, STREAM_TYPE, EVENT_NAME, EVENT_VERSION) VALUES (?::UUID, ?::UUID, ?::JSONB, ?, ?, ?)",
                     [event.id, event.aggregateId, payload, streamType, "DummyEvent", 1]
