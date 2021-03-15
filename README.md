@@ -12,7 +12,7 @@
 
 ## Overview <a name="Overview"></a>
 
-If you want to use event sourcing together with java and sql database that library is for you.
+If you want to use event sourcing together with java and sql database this library is for you.
 In additional to its primary goal, which is event persistence, it also:
 * helps to deal with DDD aggregates (supports aggregate recreation from events)
 * supports hexagonal architecture approach (does not force your events and aggregates to extend library-specific classes)
@@ -46,7 +46,7 @@ If you are using maven add it to pom.xml:
 
 ### Migrate database
 
-Add those [scripts](https://github.com/HLTech/SqlEventStore4J/tree/main/src/test/resources/db/migration) to your database migration tool.
+Use those [scripts](https://github.com/HLTech/SqlEventStore4J/tree/main/src/test/resources/db/migration) to create required tables in you database.
 
 ## How to use it <a name="HowToUseIt"></a>
 
@@ -136,7 +136,7 @@ Event store is ready to use. Its API allows to save and find events in the strea
 ```java
 UUID aggregateId = UUID.randomUUID();
 eventStore.save(new OrderPlaced(UUID.randomUUID(), aggregateId, "PizzaOrder3214"), "OrderStream");
-eventStore.save(new OrderCancelled(UUID.randomUUID(), aggregateId, "I'm not hungry anymory"), "OrderStream");
+eventStore.save(new OrderCancelled(UUID.randomUUID(), aggregateId, "I'm not hungry anymore"), "OrderStream");
 List<Event> events = eventStore.findAll(aggregateId, "OrderStream");
 ```
 
