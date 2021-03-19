@@ -28,6 +28,6 @@ jobs:
 
     - name: Deploy to maven central
       if: github.ref == 'refs/heads/main'
-      run: deploy_to_maven_central.sh
+      run: sh ./deploy_to_maven_central.sh
       env:
         GPG_SECRET: ${{ secrets.ENC_KEY }}
