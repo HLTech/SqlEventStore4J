@@ -11,8 +11,6 @@ public interface EventStore<E> {
             String streamName
     );
 
-    List<E> findAll(UUID aggregateId);
-
     Map<UUID, List<E>> findAll(String streamName);
 
     List<E> findAll(UUID aggregateId, String streamName);

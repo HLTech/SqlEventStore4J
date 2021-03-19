@@ -22,10 +22,6 @@ public class PostgresEventStore<E> implements EventStore<E> {
 
     public static final String SAVE_EVENT_QUERY = "insert into event(id, aggregate_id, stream_name, payload, event_name, event_version) "
             + "VALUES(?::uuid, ?::uuid, ?, ?::JSONB, ?, ?)";
-    public static final String FIND_ALL_BY_AGGREGATE_ID_QUERY = "SELECT payload, event_name, event_version "
-            + "FROM event "
-            + "where aggregate_id = ?::UUID "
-            + "ORDER BY order_of_occurrence ASC";
     public static final String FIND_ALL_BY_STREAM_NAME_QUERY = "SELECT payload, event_name, event_version "
             + "FROM event where stream_name = ? "
             + "ORDER BY order_of_occurrence ASC";
@@ -66,23 +62,6 @@ public class PostgresEventStore<E> implements EventStore<E> {
             throw new EventStoreException(
                     String.format("Could not save event to database with aggregateId %s  in stream %s", aggregateIdExtractor.apply(event), streamName),
                     ex
-            );
-        }
-    }
-
-    @Override
-    public List<E> findAll(UUID aggregateId) {
-        try (
-                Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(FIND_ALL_BY_AGGREGATE_ID_QUERY)
-        ) {
-            pst.setObject(1, aggregateId);
-            ResultSet rs = pst.executeQuery();
-
-            return extractEventsFromResultSet(rs);
-        } catch (SQLException ex) {
-            throw new EventStoreException(
-                    String.format("Could not find events for aggregate %s", aggregateId), ex
             );
         }
     }
