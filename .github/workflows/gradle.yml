@@ -31,3 +31,5 @@ jobs:
       run: bash ./deploy_to_maven_central.sh
       env:
         GPG_SECRET: ${{ secrets.ENC_KEY }}
+        SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
