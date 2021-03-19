@@ -127,6 +127,8 @@ if (project.hasProperty("signing.keyId")) {
 
 nexusStaging {
     packageGroup project.group
+    username System.getenv('SONATYPE_USER')
+    password System.getenv('SONATYPE_PASSWORD')
     stagingProfileId = '8932a92dff8c84'
     numberOfRetries = 5
     delayBetweenRetriesInMillis = 60000
