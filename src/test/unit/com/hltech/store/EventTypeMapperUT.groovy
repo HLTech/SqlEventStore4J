@@ -38,6 +38,6 @@ class EventTypeMapperUT extends Specification {
 
     static eventType = DummyEvent.class
     static eventName = "DummyEvent"
-    static eventVersion = 1 as short
+    static eventVersion = 1
 
 }

@@ -8,5 +8,5 @@ create table event
     order_of_occurrence bigserial not null,
     stream_name         varchar   not null,
     event_name          varchar   not null,
-    event_version       smallint  not null
+    event_version       int  not null
 );

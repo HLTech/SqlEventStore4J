@@ -26,7 +26,7 @@ public class SimpleEventTypeMapper<E> implements EventTypeMapper<E> {
     }
 
     @Override
-    public short toVersion(Class<? extends E> eventType) {
+    public int toVersion(Class<? extends E> eventType) {
         NameAndVersion nameAndVersion = eventTypeToNameAndVersionMap.get(eventType);
         if (nameAndVersion == null) {
             throw new EventTypeMappingException("Mapping to event version not found for event type: " + eventType);
@@ -35,7 +35,7 @@ public class SimpleEventTypeMapper<E> implements EventTypeMapper<E> {
     }
 
     @Override
-    public Class<? extends E> toType(String eventName, short eventVersion) {
+    public Class<? extends E> toType(String eventName, int eventVersion) {
         Class<? extends E> eventType = eventNameAndVersionToTypeMap.get(new NameAndVersion(eventName, eventVersion));
         if (eventType == null) {
             throw new EventTypeMappingException("Mapping to event type not found for event name: " + eventName + " and event version: " + eventVersion);
