@@ -196,7 +196,7 @@ Optional<Order> order = repository.find(aggregateId);
 
 ## Events versioning <a name="EventsVersioning"></a>
 
-Let's assume that you have actual version of OrderPlaced event:
+Let’s assume that you have an actual version of OrderPlaced event:
 
 ```java
 class OrderPlaced implements Event {
@@ -209,7 +209,7 @@ class OrderPlaced implements Event {
 }
 ```
 
-but you also has deprecated version of the same event, because some time ago order number was not required:
+but you also have deprecated version of the same event, because some time ago order number was not required:
 
 ```java
 class OrderPlacedV1 implements OrderPlaced {
@@ -230,7 +230,7 @@ eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 2);
 eventTypeMapper.registerMapping(OrderPlacedV1.class, "OrderPlaced", 1);
 ```
 
-If you will need to add third version of OrderPlaced event in the future, you should reconfigure mapping for actual event version and add mapping for deprecated:
+If you will need to add a third version of OrderPlaced event in the future, you should reconfigure mapping for actual event version and add mapping for deprecated:
 
 ```java
 eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 3);
