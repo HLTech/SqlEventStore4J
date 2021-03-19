@@ -39,39 +39,6 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     }
 
-    def "findAll by aggregateId should return all events related to aggregate in correct order across all streams"() {
-
-        given: 'Events exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_NAME)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_NAME)
-
-        when: 'Search for events by aggregateId'
-            def events = postgresEventStore.findAll(AGGREGATE_ID)
-
-        then: 'Events found'
-            events.size() == AGGREGATE_EVENTS.size()
-
-        and: 'Events in correct order'
-            AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
-                assert event == events[idx]
-            }
-
-    }
-
-    def "findAll by aggregateId should not return events when events for given aggregate not exist"() {
-
-        given: 'Events exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_NAME)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_NAME)
-
-        when: 'Search for events by another aggregateId'
-            def events = postgresEventStore.findAll(ANOTHER_AGGREGATE_ID)
-
-        then: 'Events not found'
-            events.isEmpty()
-
-    }
-
     def "findAll by stream name should return all events in the stream in correct order"() {
 
         given: 'Events for two different aggregates exist in database in single streams'
