@@ -1,8 +1,10 @@
 package com.hltech.store
 
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
 
 @EqualsAndHashCode
+@ToString
 class DummyEvent implements DummyBaseEvent {
 
     UUID id
