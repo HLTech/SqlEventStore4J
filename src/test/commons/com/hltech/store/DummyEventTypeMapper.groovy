@@ -8,12 +8,12 @@ class DummyEventTypeMapper implements EventTypeMapper<DummyBaseEvent> {
     }
 
     @Override
-    short toVersion(Class<? extends DummyBaseEvent> eventType) {
+    int toVersion(Class<? extends DummyBaseEvent> eventType) {
         1
     }
 
     @Override
-    Class<? extends DummyBaseEvent> toType(String eventName, short eventVersion) {
+    Class<? extends DummyBaseEvent> toType(String eventName, int eventVersion) {
         DummyEvent.class
     }
 

@@ -7,13 +7,13 @@ public interface EventTypeMapper<E> {
 
     String toName(Class<? extends E> eventType);
 
-    short toVersion(Class<? extends E> eventType);
+    int toVersion(Class<? extends E> eventType);
 
-    Class<? extends E> toType(String eventName, short eventVersion);
+    Class<? extends E> toType(String eventName, int eventVersion);
 
     void registerMapping(TypeNameAndVersion<? extends E> mapping);
 
-    default void registerMapping(Class<? extends E> eventType, String eventName, short eventVersion) {
+    default void registerMapping(Class<? extends E> eventType, String eventName, int eventVersion) {
         registerMapping(new TypeNameAndVersion<E>(eventType, eventName, eventVersion));
     }
 
@@ -31,7 +31,7 @@ public interface EventTypeMapper<E> {
             this.nameAndVersion = nameAndVersion;
         }
 
-        public TypeNameAndVersion(Class<? extends E> type, String name, short version) {
+        public TypeNameAndVersion(Class<? extends E> type, String name, int version) {
             this.type = type;
             this.nameAndVersion = new NameAndVersion(name, version);
         }
@@ -44,7 +44,7 @@ public interface EventTypeMapper<E> {
             return this.nameAndVersion.name;
         }
 
-        public short getVersion() {
+        public int getVersion() {
             return this.nameAndVersion.version;
         }
 
@@ -88,11 +88,11 @@ public interface EventTypeMapper<E> {
     class NameAndVersion {
 
         private final String name;
-        private final short version;
+        private final int version;
 
         public NameAndVersion(
                 String name,
-                short version
+                int version
         ) {
             this.name = name;
             this.version = version;
@@ -102,7 +102,7 @@ public interface EventTypeMapper<E> {
             return this.name;
         }
 
-        public short getVersion() {
+        public int getVersion() {
             return this.version;
         }
 

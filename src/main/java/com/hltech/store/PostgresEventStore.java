@@ -150,7 +150,7 @@ public class PostgresEventStore<E> implements EventStore<E> {
         while (rs.next()) {
             Class<? extends E> eventType = eventTypeMapper.toType(
                     rs.getString("event_name"),
-                    rs.getShort("event_version")
+                    rs.getInt("event_version")
             );
             E event = eventBodyMapper.stringToEvent(rs.getObject("payload").toString(), eventType);
             result.add(event);
