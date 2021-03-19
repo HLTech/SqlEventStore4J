@@ -28,6 +28,14 @@ group = 'com.hltech'
 
 repositories(repos)
 
+scmVersion {
+    tag {
+        prefix = 'sql-event-store-4j-release'
+    }
+}
+
+project.version = scmVersion.version
+
 apply from: 'gradle/test.gradle'
 apply from: 'gradle/codequality.gradle'
 

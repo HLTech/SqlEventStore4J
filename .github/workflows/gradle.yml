@@ -27,7 +27,6 @@ jobs:
       run: ./gradlew --info build
 
     - name: Deploy to maven central
-      if: github.ref == 'refs/heads/main'
       run: bash ./deploy_to_maven_central.sh
       env:
         GPG_SECRET: ${{ secrets.ENC_KEY }}
