@@ -23,6 +23,6 @@ gpg --fast-import --no-tty --batch --yes secring.gpg
 
 echo "📦 Publishing..."
 
-./gradlew publish closeAndReleaseRepository
+./gradlew publishToNexus closeAndReleaseRepository
 
 echo "✅ Done!"
