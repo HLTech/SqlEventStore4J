@@ -5,15 +5,23 @@ buildscript {
             mavenLocal()
             mavenCentral()
         }
+        nexusStagingPluginVersion = '0.20.0'
+        nexusPublishPluginVersion = '0.2.0'
+        axionReleasePluginVersion = '1.10.0'
     }
 }
 
 plugins {
     id 'java'
     id 'idea'
-    id 'groovy'
-    id 'jacoco'
     id 'checkstyle'
+    id 'jacoco'
+    id 'maven-publish'
+    id 'groovy'
+    id 'signing'
+    id 'pl.allegro.tech.build.axion-release' version "$axionReleasePluginVersion"
+    id 'de.marcphilipp.nexus-publish' version "$nexusPublishPluginVersion"
+    id 'io.codearte.nexus-staging' version "$nexusStagingPluginVersion"
 }
 
 group = 'com.hltech'
@@ -30,6 +38,10 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:1.7.25'
     implementation 'org.slf4j:slf4j-simple:1.7.25'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.1'
+
+    implementation "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:$nexusStagingPluginVersion"
+    implementation "de.marcphilipp.gradle:nexus-publish-plugin:$nexusPublishPluginVersion"
+    implementation "pl.allegro.tech.build:axion-release-plugin:$axionReleasePluginVersion"
 
     /* LOMBOK - generate additional bytecode during compilation*/
     compileOnly "org.projectlombok:lombok:1.18.16"
@@ -63,7 +75,7 @@ publishing {
             artifact javadocJar
             pom {
                 version = project.version
-                artifactId  = project.name
+                artifactId  = 'sql-event-store-4j'
                 name = project.name
                 groupId = project.group
                 packaging = 'jar'
@@ -115,10 +127,10 @@ if (project.hasProperty("signing.keyId")) {
 
 nexusStaging {
     packageGroup project.group
-    username System.getenv('SONATYPE_USER')
-    password System.getenv('SONATYPE_PASSWORD')
     stagingProfileId = '8932a92dff8c84'
     numberOfRetries = 5
     delayBetweenRetriesInMillis = 60000
 }
+
+
 
