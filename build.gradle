@@ -7,7 +7,7 @@ buildscript {
         }
         nexusStagingPluginVersion = '0.20.0'
         nexusPublishPluginVersion = '0.2.0'
-        axionReleasePluginVersion = '1.10.0'
+        axionReleasePluginVersion = '1.12.1'
     }
 }
 
@@ -27,6 +27,14 @@ plugins {
 group = 'com.hltech'
 
 repositories(repos)
+
+scmVersion {
+    tag {
+        prefix = 'sql-event-store-4j-release'
+    }
+}
+
+project.version = scmVersion.version
 
 apply from: 'gradle/test.gradle'
 apply from: 'gradle/codequality.gradle'
