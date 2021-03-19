@@ -2,7 +2,7 @@ package com.hltech.store
 
 import spock.lang.Subject
 
-import static org.testcontainers.shaded.org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
+import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
 
 class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
