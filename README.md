@@ -57,20 +57,20 @@ Let's assume that you have events like those in your code:
 ```java
 class OrderPlaced implements Event {
 
-    private final UUID id;
-    private final UUID aggregateId;
-    private final String orderNumber;
+    private UUID id;
+    private UUID aggregateId;
+    private String orderNumber;
 
-    // All args constructor and getters here
+    // No args and all args constructors and getters here
 }
 
 class OrderCancelled implements Event {
 
-    private final UUID id;
-    private final UUID aggregateId;
-    private final String reason;
+    private UUID id;
+    private UUID aggregateId;
+    private String reason;
 
-    // All args constructor and getters here
+    // No args and all args constructors and getters here
 
 }
 ```
@@ -100,8 +100,8 @@ Let's go through required parameters for PostgresEventStore:
 
     EventTypeMapper is needed to map events classes to its names and back again. How to configure it:
     ```
-    eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", (short) 1);
-    eventTypeMapper.registerMapping(OrderCancelled.class, "OrderCancelled", (short) 1);
+    eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 1);
+    eventTypeMapper.registerMapping(OrderCancelled.class, "OrderCancelled", 1);
     ```
     Third parameter here is event version. It is detailed described in [events versioning](#EventsVersioning).
     For now, it is important that the event name and version of the event in a pair are unique and point to a single class.
@@ -196,7 +196,47 @@ Optional<Order> order = repository.find(aggregateId);
 
 ## Events versioning <a name="EventsVersioning"></a>
 
-TODO
+Let's assume that you have actual version of OrderPlaced event:
+
+```java
+class OrderPlaced implements Event {
+
+    private UUID id;
+    private UUID aggregateId;
+    private String orderNumber;
+
+    // No args and all args constructors and getters here
+}
+```
+
+but you also has deprecated version of the same event, because some time ago order number was not required:
+
+```java
+class OrderPlacedV1 implements OrderPlaced {
+
+    private UUID id;
+    private UUID aggregateId;
+    private String orderNumber = 'undefined';
+
+    // No args and all args constructors and getters here
+
+}
+```
+
+proper configuration for such situation would be:
+
+```java
+eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 2);
+eventTypeMapper.registerMapping(OrderPlacedV1.class, "OrderPlaced", 1);
+```
+
+If you will need to add third version of OrderPlaced event in the future, you should reconfigure mapping for actual event version and add mapping for deprecated:
+
+```java
+eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 3);
+eventTypeMapper.registerMapping(OrderPlacedV2.class, "OrderPlaced", 2);
+eventTypeMapper.registerMapping(OrderPlacedV1.class, "OrderPlaced", 1);
+```
 
 ## Authors <a name="Authors"></a>
 
