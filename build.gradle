@@ -8,6 +8,7 @@ buildscript {
         nexusStagingPluginVersion = '0.20.0'
         nexusPublishPluginVersion = '0.2.0'
         axionReleasePluginVersion = '1.12.1'
+        publishingPluginVersion = '1.0.0'
     }
 }
 
@@ -20,7 +21,7 @@ plugins {
     id 'groovy'
     id 'signing'
     id 'pl.allegro.tech.build.axion-release' version "$axionReleasePluginVersion"
-    id 'de.marcphilipp.nexus-publish' version "$nexusPublishPluginVersion"
+    id 'io.github.gradle-nexus.publish-plugin' version "$publishingPluginVersion"
     id 'io.codearte.nexus-staging' version "$nexusStagingPluginVersion"
 }
 
@@ -48,7 +49,6 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.1'
 
     implementation "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:$nexusStagingPluginVersion"
-    implementation "de.marcphilipp.gradle:nexus-publish-plugin:$nexusPublishPluginVersion"
     implementation "pl.allegro.tech.build:axion-release-plugin:$axionReleasePluginVersion"
 
     /* LOMBOK - generate additional bytecode during compilation*/
@@ -73,6 +73,15 @@ task sourcesJar(type: Jar) {
 
 artifacts {
     archives javadocJar, sourcesJar
+}
+
+nexusPublishing {
+    repositories {
+        sonatype{
+            username = System.getenv('SONATYPE_USER')
+            password = System.getenv('SONATYPE_PASSWORD')
+        }
+    }
 }
 
 publishing {
