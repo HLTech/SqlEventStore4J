@@ -1,0 +1,23 @@
+# This workflow will build a Java project with Gradle
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: push event-store to maven central
+
+on:
+    push:
+        tags:
+            - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Deploy to maven central
+#      if: github.ref == 'refs/heads/main'
+      run: bash ./deploy_to_maven_central.sh
+      env:
+        GPG_SECRET: ${{ secrets.ENC_KEY }}
+        SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
