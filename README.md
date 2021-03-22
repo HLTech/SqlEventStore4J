@@ -51,6 +51,8 @@ Use those [scripts](https://github.com/HLTech/SqlEventStore4J/tree/main/src/test
 
 ## How to use it <a name="HowToUseIt"></a>
 
+Below, very simple example, is here for quick overview. For more complex examples please visit [SqlEventStore4JExamples](https://github.com/HLTech/SqlEventStore4JExamples)
+
 ### Assumptions
 
 Let's assume that you have events like those in your code:
