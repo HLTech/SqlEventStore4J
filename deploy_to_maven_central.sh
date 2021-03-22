@@ -22,6 +22,6 @@ gpg --fast-import --no-tty --batch --yes secring.gpg
 
 echo "📦 Publishing..."
 
-./gradlew currentVersion publishToSonatype closeSonatypeStagingRepository
+./gradlew currentVersion publishToSonatype closeAndReleaseSonatypeStagingRepository
 
 echo "✅ Done!"
