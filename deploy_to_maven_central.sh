@@ -12,7 +12,6 @@ trap cleanup SIGINT SIGTERM ERR EXIT
 echo "🚀 Preparing to deploy..."
 
 echo "🔑 Decrypting files..."
-
 gpg --quiet --batch --yes --decrypt --passphrase="${GPG_SECRET}" \
     --output secring.gpg secring.gpg.enc
 
@@ -23,6 +22,6 @@ gpg --fast-import --no-tty --batch --yes secring.gpg
 
 echo "📦 Publishing..."
 
-./gradlew publishToNexus closeAndReleaseRepository
+./gradlew currentVersion publishToSonatype closeAndReleaseSonatypeStagingRepository
 
 echo "✅ Done!"
