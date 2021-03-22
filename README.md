@@ -7,6 +7,7 @@
 2. [**How to add it to project**](#HowToAddItToProject)
 3. [**How to use it**](#HowToUseIt)
 4. [**Events versioning**](#EventsVersioning)
+4. [**Databases**](#Databases)
 6. [**Authors**](#Authors)
 7. [**License**](#License)
 
@@ -140,7 +141,7 @@ eventStore.save(new OrderCancelled(UUID.randomUUID(), aggregateId, "I'm not hung
 List<Event> events = eventStore.findAll(aggregateId, "OrderStream");
 ```
 
-You can stop here if it's all you, need but what about aggregates?
+You can stop here if it's all you need, but what about aggregates?
 
 ### Dealing with aggregates
 
@@ -237,6 +238,11 @@ eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 3);
 eventTypeMapper.registerMapping(OrderPlacedV2.class, "OrderPlaced", 2);
 eventTypeMapper.registerMapping(OrderPlacedV1.class, "OrderPlaced", 1);
 ```
+
+## Databases <a name="Databases"></a>
+
+Supported databases:
+* PostgreSQL
 
 ## Authors <a name="Authors"></a>
 
