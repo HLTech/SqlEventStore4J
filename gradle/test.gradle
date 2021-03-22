@@ -7,6 +7,7 @@ buildscript{
         postgresqlVersion = '42.2.10'
         flywayVersion = '7.5.3'
         cglibNodepVersion = '3.3.0'
+        oracleDriverVersion = '19.3.0.0'
 
     }
 }
@@ -22,9 +23,11 @@ sourceSets {
 
 dependencies {
     testImplementation "org.testcontainers:postgresql:$testContainersVersion"
+    testImplementation "org.testcontainers:oracle-xe:$testContainersVersion"
     testImplementation "org.codehaus.groovy:groovy-all:$groovyAllVersion"
     testImplementation "org.spockframework:spock-core:$spockVersion"
     testImplementation "org.postgresql:postgresql:$postgresqlVersion"
+    testImplementation "com.oracle.ojdbc:ojdbc8:$oracleDriverVersion"
     testImplementation "org.flywaydb:flyway-core:$flywayVersion"
     testImplementation "cglib:cglib-nodep:$cglibNodepVersion"
 }

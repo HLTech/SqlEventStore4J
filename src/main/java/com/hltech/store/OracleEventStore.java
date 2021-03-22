@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -19,29 +22,29 @@ import static java.util.stream.Collectors.groupingBy;
 
 @Slf4j
 @RequiredArgsConstructor
-public class PostgresEventStore<E> implements EventStore<E> {
+public class OracleEventStore<E> implements EventStore<E> {
 
     private static final String SAVE_EVENT_QUERY = "insert into event(id, aggregate_id, aggregate_name, stream_id, payload, event_name, event_version) "
-            + "SELECT ?::uuid, ais.aggregate_id, ais.aggregate_name, ais.stream_id, ?::JSONB, ?, ? "
+            + "SELECT ?, ais.aggregate_id, ais.aggregate_name, ais.stream_id, ?, ?, ? "
             + "FROM aggregate_in_stream ais "
             + "WHERE ais.aggregate_id = ? "
             + "AND ais.aggregate_name = ?";
     private static final String SAVE_STREAM_QUERY = "insert into aggregate_in_stream(aggregate_id, aggregate_name, stream_id) "
-            + "VALUES(?::uuid, ?, ?)";
+            + "VALUES(?, ?, ?)";
     private static final String FIND_ALL_BY_AGGREGATE_NAME_QUERY = "SELECT payload, event_name, event_version "
             + "FROM event "
             + "WHERE aggregate_name = ? "
             + "ORDER BY order_of_occurrence ASC";
     private static final String FIND_ALL_BY_AGGREGATE_ID_AND_AGGREGATE_NAME_QUERY = "SELECT payload, event_name, event_version "
             + "FROM event "
-            + "WHERE aggregate_id = ?::UUID "
+            + "WHERE aggregate_id = ? "
             + "AND aggregate_name = ? "
             + "ORDER BY order_of_occurrence ASC";
     private static final String FIND_ALL_TO_EVENT_QUERY = "SELECT payload, event_name, event_version "
             + "FROM event "
-            + "WHERE aggregate_id = ?::UUID "
+            + "WHERE aggregate_id = ? "
             + "AND aggregate_name = ? "
-            + "and order_of_occurrence <= (select order_of_occurrence from event where id = ?::UUID) "
+            + "and order_of_occurrence <= (select order_of_occurrence from event where id = ?) "
             + "ORDER BY order_of_occurrence ASC";
 
     private final Function<E, UUID> eventIdExtractor;
@@ -59,11 +62,11 @@ public class PostgresEventStore<E> implements EventStore<E> {
                 Connection con = dataSource.getConnection();
                 PreparedStatement pst = con.prepareStatement(SAVE_EVENT_QUERY)
         ) {
-            pst.setObject(1, eventIdExtractor.apply(event));
-            pst.setObject(2, eventBodyMapper.eventToString(event));
+            pst.setObject(1, uuidToDatabaseUUID(eventIdExtractor.apply(event)));
+            pst.setBlob(2, new ByteArrayInputStream(eventBodyMapper.eventToString(event).getBytes(StandardCharsets.UTF_8)));
             pst.setObject(3, eventTypeMapper.toName((Class<? extends E>) event.getClass()));
             pst.setObject(4, eventTypeMapper.toVersion((Class<? extends E>) event.getClass()));
-            pst.setObject(5, aggregateIdExtractor.apply(event));
+            pst.setObject(5, uuidToDatabaseUUID(aggregateIdExtractor.apply(event)));
             pst.setString(6, aggregateName);
 
             if (pst.executeUpdate() == 0) {
@@ -84,9 +87,9 @@ public class PostgresEventStore<E> implements EventStore<E> {
                 Connection con = dataSource.getConnection();
                 PreparedStatement pst = con.prepareStatement(SAVE_STREAM_QUERY)
         ) {
-            pst.setObject(1, aggregateId);
+            pst.setObject(1, uuidToDatabaseUUID(aggregateId));
             pst.setObject(2, aggregateName);
-            pst.setObject(3, randomUUID());
+            pst.setObject(3, uuidToDatabaseUUID(randomUUID()));
             pst.executeUpdate();
         } catch (SQLException ex) {
             throw new EventStoreException(
@@ -120,7 +123,7 @@ public class PostgresEventStore<E> implements EventStore<E> {
                 Connection con = dataSource.getConnection();
                 PreparedStatement pst = con.prepareStatement(FIND_ALL_BY_AGGREGATE_ID_AND_AGGREGATE_NAME_QUERY)
         ) {
-            pst.setObject(1, aggregateId);
+            pst.setObject(1, uuidToDatabaseUUID(aggregateId));
             pst.setObject(2, aggregateName);
             ResultSet rs = pst.executeQuery();
 
@@ -138,9 +141,9 @@ public class PostgresEventStore<E> implements EventStore<E> {
                 Connection con = dataSource.getConnection();
                 PreparedStatement pst = con.prepareStatement(FIND_ALL_TO_EVENT_QUERY)
         ) {
-            pst.setObject(1, aggregateIdExtractor.apply(toEvent));
+            pst.setObject(1, uuidToDatabaseUUID(aggregateIdExtractor.apply(toEvent)));
             pst.setObject(2, aggregateName);
-            pst.setObject(3, eventIdExtractor.apply(toEvent));
+            pst.setObject(3, uuidToDatabaseUUID(eventIdExtractor.apply(toEvent)));
             ResultSet rs = pst.executeQuery();
 
             return extractEventsFromResultSet(rs);
@@ -161,10 +164,17 @@ public class PostgresEventStore<E> implements EventStore<E> {
                     rs.getString("event_name"),
                     rs.getInt("event_version")
             );
-            E event = eventBodyMapper.stringToEvent(rs.getObject("payload").toString(), eventType);
+
+            Blob blobedPayload = rs.getBlob("payload");
+            byte[] buffedPayload = blobedPayload.getBytes(1, (int) blobedPayload.length());
+            E event = eventBodyMapper.stringToEvent(new String(buffedPayload), eventType);
             result.add(event);
         }
         return result;
+    }
+
+    private Object uuidToDatabaseUUID(UUID uuid) {
+        return String.valueOf(uuid);
     }
 
 }
