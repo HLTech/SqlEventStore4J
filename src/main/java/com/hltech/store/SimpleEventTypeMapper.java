@@ -45,8 +45,44 @@ public class SimpleEventTypeMapper<E> implements EventTypeMapper<E> {
 
     @Override
     public void registerMapping(TypeNameAndVersion<? extends E> mapping) {
+        validateUniqueEventNameAndVersion(mapping);
+        validateUniqueType(mapping);
+
         eventNameAndVersionToTypeMap.put(mapping.getNameAndVersion(), mapping.getType());
         eventTypeToNameAndVersionMap.put(mapping.getType(), mapping.getNameAndVersion());
+
+    }
+
+    /**
+     * Validates if user did not configure same event name and version for more than one type, for example:
+     * eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 1);
+     * eventTypeMapper.registerMapping(OrderCancelled.class, "OrderPlaced", 1);
+     */
+    private void validateUniqueEventNameAndVersion(TypeNameAndVersion<? extends E> mapping) {
+        if (eventNameAndVersionToTypeMap.containsKey(mapping.getNameAndVersion())) {
+            Class<? extends E> type = eventNameAndVersionToTypeMap.get(mapping.getNameAndVersion());
+            throw new NonUniqueMappingException(
+                    String.format("Mapping for event name: %s and version: %s was already configured for type: %s",
+                            mapping.getName(), mapping.getVersion(), type
+                    )
+            );
+        }
+    }
+
+    /**
+     * Validates if user did not configure same event type more than once, for example:
+     * eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 1);
+     * eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlacedNew", 2);
+     */
+    private void validateUniqueType(TypeNameAndVersion<? extends E> mapping) {
+        if (eventTypeToNameAndVersionMap.containsKey(mapping.getType())) {
+            NameAndVersion nameAndVersion = eventTypeToNameAndVersionMap.get(mapping.getType());
+            throw new NonUniqueMappingException(
+                    String.format("Mapping for event type: %s was already configured for event name: %s and version: %s",
+                            mapping.getType(), nameAndVersion.getName(), nameAndVersion.getVersion()
+                    )
+            );
+        }
     }
 
 }
