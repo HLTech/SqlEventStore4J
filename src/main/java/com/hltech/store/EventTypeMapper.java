@@ -144,4 +144,12 @@ public interface EventTypeMapper<E> {
 
     }
 
+    class NonUniqueMappingException extends RuntimeException {
+
+        NonUniqueMappingException(String message) {
+            super(message);
+        }
+
+    }
+
 }

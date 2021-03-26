@@ -239,6 +239,34 @@ class SimpleEventTypeMapperUT extends Specification {
 
     }
 
+    def "registerMapping should throw exception when mapping has already been registered for given eventName and version"() {
+
+        given: 'EventType registered for eventName and eventVersion'
+            simpleEventTypeMapper.registerMapping(eventType, eventName, eventVersion)
+
+        when: 'EventType registered for same eventName and eventVersion'
+            simpleEventTypeMapper.registerMapping(anotherEventType, eventName, eventVersion)
+
+        then: 'expected exception thrown'
+            def ex = thrown(EventTypeMapper.NonUniqueMappingException)
+            ex.message == "Mapping for event name: $eventName and version: $eventVersion was already configured for type: $eventType"
+
+    }
+
+    def "registerMapping should throw exception when mapping has already been registered for given eventType"() {
+
+        given: 'EventType registered for eventType'
+            simpleEventTypeMapper.registerMapping(eventType, eventName, eventVersion)
+
+        when: 'EventType registered for same eventType'
+            simpleEventTypeMapper.registerMapping(eventType, anotherEventName, anotherEventVersion)
+
+        then: 'expected exception thrown'
+            def ex = thrown(EventTypeMapper.NonUniqueMappingException)
+            ex.message == "Mapping for event type: $eventType was already configured for event name: $eventName and version: $eventVersion"
+
+    }
+
     static eventType = DummyEvent.class
     static eventName = "DummyEvent"
     static eventVersion = 1
