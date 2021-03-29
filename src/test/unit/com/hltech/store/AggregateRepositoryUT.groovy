@@ -12,7 +12,7 @@ class AggregateRepositoryUT extends Specification {
             eventStore,
             DummyAggregate.INITIAL_STATE_SUPPLIER,
             DummyAggregate.EVENT_APPLIER,
-            STREAM_NAME
+            AGGREGATE_NAME
     )
 
     def "save should save event in event store in a proper stream"() {
@@ -21,14 +21,14 @@ class AggregateRepositoryUT extends Specification {
             repository.save(EVENT)
 
         then: 'Event saved in proper stream'
-            1 * eventStore.save(EVENT, STREAM_NAME)
+            1 * eventStore.save(EVENT, AGGREGATE_NAME)
 
     }
 
     def "find should return aggregate with all events applied"() {
 
         given: 'Events for aggregate exists in event store'
-            eventStore.findAll(AGGREGATE_ID, STREAM_NAME) >> [EVENT]
+            eventStore.findAll(AGGREGATE_ID, AGGREGATE_NAME) >> [EVENT]
 
         when: 'Search for aggregate'
             Optional<DummyAggregate> aggregate = repository.find(AGGREGATE_ID)
@@ -44,7 +44,7 @@ class AggregateRepositoryUT extends Specification {
     def "find should not return aggregate when there is no events for aggregate in event store"() {
 
         given: 'Events for aggregate does not exist in event store'
-            eventStore.findAll(AGGREGATE_ID, STREAM_NAME) >> []
+            eventStore.findAll(AGGREGATE_ID, AGGREGATE_NAME) >> []
 
         when: 'Search for aggregate'
             Optional<DummyAggregate> aggregate = repository.find(AGGREGATE_ID)
@@ -57,7 +57,7 @@ class AggregateRepositoryUT extends Specification {
     def "get should return aggregate with all events applied"() {
 
         given: 'Events for aggregate exists in event store'
-            eventStore.findAll(AGGREGATE_ID, STREAM_NAME) >> [EVENT]
+            eventStore.findAll(AGGREGATE_ID, AGGREGATE_NAME) >> [EVENT]
 
         when: 'Get aggregate'
             DummyAggregate aggregate = repository.get(AGGREGATE_ID)
@@ -73,21 +73,21 @@ class AggregateRepositoryUT extends Specification {
     def "get should throw exception when there is no events for aggregate in event store"() {
 
         given: 'Events for aggregate does not exist in event store'
-            eventStore.findAll(AGGREGATE_ID, STREAM_NAME) >> []
+            eventStore.findAll(AGGREGATE_ID, AGGREGATE_NAME) >> []
 
         when: 'Get aggregate'
             repository.get(AGGREGATE_ID)
 
         then: 'Exception thrown'
             def ex = thrown(AggregateRepositoryException)
-            ex.message == "Could not find aggregate with id: $AGGREGATE_ID in stream: $STREAM_NAME"
+            ex.message == "Could not find aggregate with id: $AGGREGATE_ID in stream: $AGGREGATE_NAME"
 
     }
 
     def "findToEvent should return aggregate with all events applied"() {
 
         given: 'Events for aggregate exists in event store'
-            eventStore.findAllToEvent(EVENT, STREAM_NAME) >> [EVENT]
+            eventStore.findAllToEvent(EVENT, AGGREGATE_NAME) >> [EVENT]
 
         when: 'Search for aggregate to event'
             Optional<DummyAggregate> aggregate = repository.findToEvent(EVENT)
@@ -103,7 +103,7 @@ class AggregateRepositoryUT extends Specification {
     def "findToEvent should not return aggregate when there is no events for aggregate in event store"() {
 
         given: 'Events for aggregate does not exist in event store'
-            eventStore.findAllToEvent(EVENT, STREAM_NAME) >> []
+            eventStore.findAllToEvent(EVENT, AGGREGATE_NAME) >> []
 
         when: 'Search for aggregate to event'
             Optional<DummyAggregate> aggregate = repository.findToEvent(EVENT)
@@ -116,7 +116,7 @@ class AggregateRepositoryUT extends Specification {
     def "getToEvent should return aggregate with all events applied"() {
 
         given: 'Events for aggregate exists in event store'
-            eventStore.findAllToEvent(EVENT, STREAM_NAME) >> [EVENT]
+            eventStore.findAllToEvent(EVENT, AGGREGATE_NAME) >> [EVENT]
 
         when: 'Get aggregate to event'
             DummyAggregate aggregate = repository.getToEvent(EVENT)
@@ -132,24 +132,24 @@ class AggregateRepositoryUT extends Specification {
     def "getToEvent should throw exception when there is no events for aggregate in event store"() {
 
         given: 'Events for aggregate does not exist in event store'
-            eventStore.findAllToEvent(EVENT, STREAM_NAME) >> []
+            eventStore.findAllToEvent(EVENT, AGGREGATE_NAME) >> []
 
         when: 'Get aggregate to event'
             repository.getToEvent(EVENT)
 
         then: 'Exception thrown'
             def ex = thrown(AggregateRepositoryException)
-            ex.message == "Could not find aggregate to event: $EVENT in stream: $STREAM_NAME"
+            ex.message == "Could not find aggregate to event: $EVENT in stream: $AGGREGATE_NAME"
 
     }
 
     def "findAll should return all aggregates within stream"() {
 
         given: 'Events for aggregate exists in event store for stream'
-            eventStore.findAll(STREAM_NAME) >> [AGGREGATE_ID: [EVENT] ]
+            eventStore.findAll(AGGREGATE_NAME) >> [AGGREGATE_ID: [EVENT] ]
 
         when: 'Search for aggregates'
-            List<DummyAggregate> aggregates = repository.findAll(STREAM_NAME)
+            List<DummyAggregate> aggregates = repository.findAll(AGGREGATE_NAME)
 
         then: 'Aggregates found'
             aggregates.size() == 1
@@ -162,17 +162,17 @@ class AggregateRepositoryUT extends Specification {
     def "findAll should return empty list when there is no events in the stream"() {
 
         given: 'Events does not exists in event store for stream'
-            eventStore.findAll(STREAM_NAME) >> [:]
+            eventStore.findAll(AGGREGATE_NAME) >> [:]
 
         when: 'Search for aggregates'
-            List<DummyAggregate> aggregates = repository.findAll(STREAM_NAME)
+            List<DummyAggregate> aggregates = repository.findAll(AGGREGATE_NAME)
 
         then: 'Aggregates not found'
             aggregates.empty
 
     }
 
-    static STREAM_NAME = "DummyStream"
+    static AGGREGATE_NAME = "DummyStream"
     static AGGREGATE_ID = UUID.randomUUID()
     static EVENT = new DummyEvent(AGGREGATE_ID)
 

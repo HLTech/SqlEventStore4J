@@ -8,13 +8,13 @@ public interface EventStore<E> {
 
     void save(
             E event,
-            String streamName
+            String aggregateName
     );
 
-    Map<UUID, List<E>> findAll(String streamName);
+    Map<UUID, List<E>> findAll(String aggregateName);
 
-    List<E> findAll(UUID aggregateId, String streamName);
+    List<E> findAll(UUID aggregateId, String aggregateName);
 
-    List<E> findAllToEvent(E toEvent, String streamName);
+    List<E> findAllToEvent(E toEvent, String aggregateName);
 
 }
