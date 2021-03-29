@@ -22,7 +22,7 @@ class AggregateRepositoryFT extends PostgreSQLContainerTest {
             eventStore,
             DummyAggregate.INITIAL_STATE_SUPPLIER,
             DummyAggregate.EVENT_APPLIER,
-            STREAM_NAME
+            AGGREGATE_NAME
 
     )
 
@@ -50,6 +50,6 @@ class AggregateRepositoryFT extends PostgreSQLContainerTest {
 
     }
 
-    static STREAM_NAME = randomAlphanumeric(5)
+    static AGGREGATE_NAME = randomAlphanumeric(5)
 
 }

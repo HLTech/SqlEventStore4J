@@ -21,32 +21,37 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
     def "save should be able to save events in database"() {
 
         when: 'Events saved'
-            AGGREGATE_EVENTS.each { postgresEventStore.save(it, STREAM_NAME) }
+            AGGREGATE_EVENTS.each { postgresEventStore.save(it, AGGREGATE_NAME) }
 
         then: 'All events exist in database'
-            def rows = dbClient.rows("select * from event where aggregate_id = '${AGGREGATE_ID}' order by order_of_occurrence asc".toString())
+            def rows = dbClient.rows("select * from event where aggregate_id = '${AGGREGATE_ID}' order by order_of_occurrence asc")
 
         and: 'Table rows for events as expected'
             AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
                 assert rows[idx]['id'] == event.id
                 assert rows[idx]['aggregate_id'] == event.aggregateId
+                assert rows[idx]['aggregate_name'] == AGGREGATE_NAME
+                assert rows[idx]['stream_id'] != null
                 assert rows[idx]['payload'].toString().replaceAll(" ", "") == eventBodyMapper.eventToString(event).replaceAll(" ", "")
                 assert rows[idx]['order_of_occurrence'] != null
-                assert rows[idx]['stream_name'] == STREAM_NAME
                 assert rows[idx]['event_name'] == "DummyEvent"
                 assert rows[idx]['event_version'] == 1
             }
 
     }
 
-    def "findAll by stream name should return all events in the stream in correct order"() {
+    def "findAll by aggregate name should return all events for aggregate name in the stream in correct order"() {
 
-        given: 'Events for two different aggregates exist in database in single streams'
+        given: 'Stream for aggregates exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createAggregateInStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+
+        and: 'Events for two different aggregates exist in database in single streams'
             def ALL_EVENTS = AGGREGATE_EVENTS + ANOTHER_AGGREGATE_EVENTS
-            insertEventsToDatabase(ALL_EVENTS, STREAM_NAME)
+            insertEventsToDatabase(ALL_EVENTS, AGGREGATE_NAME)
 
-        when: 'Search for events by stream name'
-            def events = postgresEventStore.findAll(STREAM_NAME)
+        when: 'Search for events by aggregate name'
+            def events = postgresEventStore.findAll(AGGREGATE_NAME)
 
         then: 'Events found for aggregate'
             events[AGGREGATE_ID].size() == AGGREGATE_EVENTS.size()
@@ -64,32 +69,39 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
                 assert event == events[ANOTHER_AGGREGATE_ID][idx]
             }
 
-        and: 'Zero event found in another stream name'
-            postgresEventStore.findAll(ANOTHER_STREAM_NAME).isEmpty()
+        and: 'Zero event found for another aggregate name'
+            postgresEventStore.findAll(ANOTHER_AGGREGATE_NAME).isEmpty()
 
     }
 
-    def "findAll by stream name should not return events when events are in a different stream name"() {
+    def "findAll by aggregate name should not return events when events has different aggregate name"() {
 
-        given: 'Events for two different aggregates exist in database in single streams'
+        given: 'Stream for aggregates exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createAggregateInStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+
+        and: 'Events for two different aggregates exist in database in single streams'
             def ALL_EVENTS = AGGREGATE_EVENTS + ANOTHER_AGGREGATE_EVENTS
-            insertEventsToDatabase(ALL_EVENTS, STREAM_NAME)
+            insertEventsToDatabase(ALL_EVENTS, AGGREGATE_NAME)
 
-        when: 'Search for events by another stream name'
-            def events = postgresEventStore.findAll(ANOTHER_STREAM_NAME)
+        when: 'Search for events by another aggregate name'
+            def events = postgresEventStore.findAll(ANOTHER_AGGREGATE_NAME)
 
         then: 'Events not found'
             events.isEmpty()
 
     }
 
-    def "findAll by aggregateId and streamName should return events related to aggregate and stream in correct order"() {
+    def "findAll by aggregateId and aggregateName should return events related to aggregate in correct order"() {
 
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_NAME)
+        given: 'Stream for aggregate exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
 
-        when: 'Search for events by aggregateId and stream name'
-            def events = postgresEventStore.findAll(AGGREGATE_ID, STREAM_NAME)
+        and: 'Events exist in database'
+            insertEventsToDatabase(AGGREGATE_EVENTS, AGGREGATE_NAME)
+
+        when: 'Search for events by aggregateId and aggregate name'
+            def events = postgresEventStore.findAll(AGGREGATE_ID, AGGREGATE_NAME)
 
         then: 'Events found'
             events.size() == AGGREGATE_EVENTS.size()
@@ -101,51 +113,63 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     }
 
-    def "findAll by aggregateId and streamName should return only events related to aggregate and stream"() {
+    def "findAll by aggregateId and aggregateName should return only events related to aggregate and stream"() {
 
-        given: 'Events exist in database for aggregate and stream name'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_NAME)
+        given: 'Streams for aggregates exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createAggregateInStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME, STREAM_ID)
+            createAggregateInStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
 
-        and: 'Events exist in database for aggregate and another stream name'
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_NAME)
+        and: 'Events exist in database for aggregate id and aggregate name'
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], AGGREGATE_NAME)
 
-        and: 'Events exist in database for another aggregate and stream name'
-            insertEventsToDatabase(ANOTHER_AGGREGATE_EVENTS, STREAM_NAME)
+        and: 'Events exist in database for aggregate and another aggregate name'
+            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_AGGREGATE_NAME)
 
-        when: 'Search for events by aggregateId and stream name'
-            def events = postgresEventStore.findAll(AGGREGATE_ID, STREAM_NAME)
+        and: 'Events exist in database for another aggregate and aggregate name'
+            insertEventsToDatabase(ANOTHER_AGGREGATE_EVENTS, AGGREGATE_NAME)
 
-        then: 'Only events for aggregate and stream name returned'
+        when: 'Search for events by aggregateId and aggregate name'
+            def events = postgresEventStore.findAll(AGGREGATE_ID, AGGREGATE_NAME)
+
+        then: 'Only events for aggregate name returned'
             events == [AGGREGATE_EVENTS[0]]
 
     }
 
     def "findAllToEvent should return given event and all other events that occurred before"() {
 
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_NAME)
+        given: 'Stream for aggregate exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+
+        and: 'Events exist in database'
+            insertEventsToDatabase(AGGREGATE_EVENTS, AGGREGATE_NAME)
 
         expect: 'Only events occurred at or before given event has been returned'
             AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
                 List<DummyEvent> events = postgresEventStore.findAllToEvent(
                         event,
-                        STREAM_NAME
+                        AGGREGATE_NAME
                 )
                 assert events.size() == idx + 1
             }
 
     }
 
-    def "findAllToEvent should return only those events which belong to given stream name"() {
+    def "findAllToEvent should return only those events which belong to given aggregate name"() {
 
-        given: 'Events exist in database in two different streams'
-            insertEventsToDatabase([AGGREGATE_EVENTS[0]], STREAM_NAME)
-            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_STREAM_NAME)
+        given: 'Streams for aggregates exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createAggregateInStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME, STREAM_ID)
+
+        and: 'Events exist in database in two different streams'
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], AGGREGATE_NAME)
+            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_AGGREGATE_NAME)
 
         when: 'Search for events in stream'
             List<DummyEvent> events = postgresEventStore.findAllToEvent(
                     AGGREGATE_EVENTS[0],
-                    STREAM_NAME
+                    AGGREGATE_NAME
             )
 
         then: 'Events found'
@@ -157,7 +181,7 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
         when: 'Search for events in another stream'
             List<DummyEvent> eventsInAnotherStream = postgresEventStore.findAllToEvent(
                     AGGREGATE_EVENTS[1],
-                    ANOTHER_STREAM_NAME
+                    ANOTHER_AGGREGATE_NAME
             )
 
         then: 'Events found'
@@ -168,15 +192,18 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     }
 
-    def "findAllToEvent should not return events when those are in a different stream name"() {
+    def "findAllToEvent should not return events when those belong to different aggregate name"() {
 
-        given: 'Events exist in database'
-            insertEventsToDatabase(AGGREGATE_EVENTS, STREAM_NAME)
+        given: 'Streams for aggregates exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
 
-        when: 'Search for events in another stream name'
+        and: 'Events exist in database'
+            insertEventsToDatabase(AGGREGATE_EVENTS, AGGREGATE_NAME)
+
+        when: 'Search for events for another aggregate name'
             List<DummyEvent> events = postgresEventStore.findAllToEvent(
                     AGGREGATE_EVENTS.last(),
-                    ANOTHER_STREAM_NAME
+                    ANOTHER_AGGREGATE_NAME
             )
 
         then: 'Events not found'
@@ -184,21 +211,30 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
 
     }
 
+    private void createAggregateInStream(
+            UUID aggregateId,
+            String aggregateName,
+            UUID streamId
+    ){
+        dbClient.execute("INSERT INTO AGGREGATE_IN_STREAM VALUES (?::UUID, ?, ?::UUID)", [aggregateId, aggregateName, streamId])
+    }
+
     private void insertEventsToDatabase(
             List<DummyBaseEvent> events,
-            String streamName
+            String aggregateName
     ) {
         events.each { DummyBaseEvent event ->
             String payload = eventBodyMapper.eventToString(event)
             dbClient.execute(
-                    "INSERT INTO EVENT (ID, AGGREGATE_ID, PAYLOAD, STREAM_NAME, EVENT_NAME, EVENT_VERSION) VALUES (?::UUID, ?::UUID, ?::JSONB, ?, ?, ?)",
-                    [event.id, event.aggregateId, payload, streamName, "DummyEvent", 1]
+                    "INSERT INTO EVENT (ID, AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID, PAYLOAD, EVENT_NAME, EVENT_VERSION) VALUES (?::UUID, ?::UUID, ?, ?::UUID, ?::JSONB, ?, ?)",
+                    [event.id, event.aggregateId, aggregateName, STREAM_ID, payload, "DummyEvent", 1]
             )
         }
     }
 
     def cleanup() {
         dbClient.execute("delete from event")
+        dbClient.execute("delete from aggregate_in_stream")
     }
 
     static AGGREGATE_ID = UUID.randomUUID()
@@ -211,7 +247,8 @@ class PostgresEventStoreIT extends PostgreSQLContainerTest {
             new DummyEvent(ANOTHER_AGGREGATE_ID),
             new DummyEvent(ANOTHER_AGGREGATE_ID)
     ]
-    static STREAM_NAME = randomAlphanumeric(5)
-    static ANOTHER_STREAM_NAME = randomAlphanumeric(5)
+    static AGGREGATE_NAME = randomAlphanumeric(5)
+    static ANOTHER_AGGREGATE_NAME = randomAlphanumeric(5)
+    static STREAM_ID = UUID.randomUUID()
 
 }

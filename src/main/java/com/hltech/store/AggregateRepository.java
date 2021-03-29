@@ -13,49 +13,49 @@ public class AggregateRepository<A, E> {
     private final EventStore<E> eventStore;
     private final Supplier<A> initialAggregateStateSupplier;
     private final BiFunction<A, E, A> eventApplier;
-    private final String streamName;
+    private final String aggregateName;
 
     public AggregateRepository(
             EventStore<E> eventStore,
             Supplier<A> initialAggregateStateSupplier,
             BiFunction<A, E, A> eventApplier,
-            String streamName
+            String aggregateName
     ) {
         this.eventStore = eventStore;
         this.initialAggregateStateSupplier = initialAggregateStateSupplier;
         this.eventApplier = eventApplier;
-        this.streamName = streamName;
+        this.aggregateName = aggregateName;
     }
 
     public void save(E event) {
-        eventStore.save(event, streamName);
+        eventStore.save(event, aggregateName);
     }
 
     public Optional<A> find(
             UUID aggregateId
     ) {
-        List<E> events = eventStore.findAll(aggregateId, streamName);
+        List<E> events = eventStore.findAll(aggregateId, aggregateName);
         return eventsToAggregate(events);
     }
 
     public A get(UUID aggregateId) {
         return find(aggregateId)
-                .orElseThrow(() -> new AggregateRepositoryException("Could not find aggregate with id: " + aggregateId + " in stream: " + streamName));
+                .orElseThrow(() -> new AggregateRepositoryException("Could not find aggregate with id: " + aggregateId + " and name: " + aggregateName));
     }
 
     public Optional<A> findToEvent(E toEvent) {
-        List<E> events = eventStore.findAllToEvent(toEvent, streamName);
+        List<E> events = eventStore.findAllToEvent(toEvent, aggregateName);
         return eventsToAggregate(events);
     }
 
     public A getToEvent(E toEvent) {
         return findToEvent(toEvent)
-                .orElseThrow(() -> new AggregateRepositoryException("Could not find aggregate to event: " + toEvent + " in stream: " + streamName));
+                .orElseThrow(() -> new AggregateRepositoryException("Could not find aggregate to event: " + toEvent + " for aggregate name: " + aggregateName));
     }
 
-    public List<A> findAll(String streamName) {
+    public List<A> findAll(String aggregateName) {
         return eventStore
-                .findAll(streamName)
+                .findAll(aggregateName)
                 .values()
                 .stream()
                 .map(this::eventsToAggregate)
