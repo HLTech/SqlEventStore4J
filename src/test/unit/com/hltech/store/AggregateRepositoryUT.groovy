@@ -80,7 +80,7 @@ class AggregateRepositoryUT extends Specification {
 
         then: 'Exception thrown'
             def ex = thrown(AggregateRepositoryException)
-            ex.message == "Could not find aggregate with id: $AGGREGATE_ID in stream: $AGGREGATE_NAME"
+            ex.message == "Could not find aggregate with id: $AGGREGATE_ID and name: $AGGREGATE_NAME"
 
     }
 
@@ -139,7 +139,7 @@ class AggregateRepositoryUT extends Specification {
 
         then: 'Exception thrown'
             def ex = thrown(AggregateRepositoryException)
-            ex.message == "Could not find aggregate to event: $EVENT in stream: $AGGREGATE_NAME"
+            ex.message == "Could not find aggregate to event: $EVENT for aggregate name: $AGGREGATE_NAME"
 
     }
 
