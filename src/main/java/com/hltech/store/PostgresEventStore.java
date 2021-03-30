@@ -21,13 +21,28 @@ import static java.util.stream.Collectors.groupingBy;
 @RequiredArgsConstructor
 public class PostgresEventStore<E> implements EventStore<E> {
 
-    public static final String SAVE_EVENT_QUERY = "insert into event(id, aggregate_id, aggregate_name, stream_id, payload, event_name, event_version) "
-            + "SELECT ?::uuid, ais.aggregate_id, ais.aggregate_name, ais.stream_id, ?::JSONB, ?, ? "
+    public static final String SAVE_EVENT_WITH_OPTIMISTIC_LOCKING_QUERY =
+            "insert into event(id, aggregate_id, aggregate_name, aggregate_version, stream_id, payload, event_name, event_version) "
+            + "SELECT ?::uuid, ais.aggregate_id, ais.aggregate_name, ?, ais.stream_id, ?::JSONB, ?, ? "
+            + "FROM aggregate_in_stream ais "
+            + "WHERE ais.aggregate_id = ? "
+            + "AND ais.aggregate_name = ?";
+    public static final String SAVE_EVENT_WITHOUT_OPTIMISTIC_LOCKING_QUERY =
+            "insert into event(id, aggregate_id, aggregate_name, aggregate_version, stream_id, payload, event_name, event_version) "
+            + "SELECT "
+            + "   ?::uuid, "
+            + "   ais.aggregate_id, "
+            + "   ais.aggregate_name, "
+            + "   (select coalesce(max(aggregate_version), 0) + 1 from event where aggregate_id = ais.aggregate_id and aggregate_name = ais.aggregate_name), "
+            + "   ais.stream_id, "
+            + "   ?::JSONB, "
+            + "   ?, "
+            + "   ? "
             + "FROM aggregate_in_stream ais "
             + "WHERE ais.aggregate_id = ? "
             + "AND ais.aggregate_name = ?";
     public static final String SAVE_STREAM_QUERY = "insert into aggregate_in_stream(aggregate_id, aggregate_name, stream_id) "
-            + "VALUES(?::uuid, ?, ?)";
+            + "VALUES(?::uuid, ?, ?) ON CONFLICT DO NOTHING";
     public static final String FIND_ALL_BY_AGGREGATE_NAME_QUERY = "SELECT payload, event_name, event_version "
             + "FROM event "
             + "WHERE aggregate_name = ? "
@@ -57,7 +72,7 @@ public class PostgresEventStore<E> implements EventStore<E> {
     ) {
         try (
                 Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(SAVE_EVENT_QUERY)
+                PreparedStatement pst = con.prepareStatement(SAVE_EVENT_WITHOUT_OPTIMISTIC_LOCKING_QUERY)
         ) {
             pst.setObject(1, eventIdExtractor.apply(event));
             pst.setObject(2, eventBodyMapper.eventToString(event));
@@ -67,19 +82,58 @@ public class PostgresEventStore<E> implements EventStore<E> {
             pst.setString(6, aggregateName);
 
             if (pst.executeUpdate() == 0) {
-                // This is the very first event for the aggregate so we have to create stream for that aggregate
-                createStreamForAggregate(aggregateIdExtractor.apply(event), aggregateName);
-                save(event, aggregateName);
+                throw new StreamNotExistException(aggregateIdExtractor.apply(event), aggregateName);
             }
-        } catch (SQLException ex) {
-            throw new EventStoreException(
-                    String.format("Could not save event to database with aggregateId %s and aggregateName %s", aggregateIdExtractor.apply(event), aggregateName),
-                    ex
-            );
+        } catch (Exception ex) {
+            if (isOptimisticLockingRelated(ex)) {
+                save(event, aggregateName);
+            } else {
+                throw new EventStoreException(
+                        String.format("Could not save event to database with aggregateId %s and aggregateName %s", aggregateIdExtractor.apply(event), aggregateName),
+                        ex
+                );
+            }
         }
     }
 
-    public void createStreamForAggregate(UUID aggregateId, String aggregateName) {
+    @Override
+    public void save(
+            E event,
+            String aggregateName,
+            int expectedAggregateVersion
+    ) {
+        try (
+                Connection con = dataSource.getConnection();
+                PreparedStatement pst = con.prepareStatement(SAVE_EVENT_WITH_OPTIMISTIC_LOCKING_QUERY)
+        ) {
+            pst.setObject(1, eventIdExtractor.apply(event));
+            pst.setObject(2, expectedAggregateVersion + 1);
+            pst.setObject(3, eventBodyMapper.eventToString(event));
+            pst.setObject(4, eventTypeMapper.toName((Class<? extends E>) event.getClass()));
+            pst.setObject(5, eventTypeMapper.toVersion((Class<? extends E>) event.getClass()));
+            pst.setObject(6, aggregateIdExtractor.apply(event));
+            pst.setString(7, aggregateName);
+
+            if (pst.executeUpdate() == 0) {
+                throw new StreamNotExistException(aggregateIdExtractor.apply(event), aggregateName);
+            }
+        } catch (Exception ex) {
+            String message = String.format(
+                    "Could not save event to database with aggregateId %s, aggregateName %s and version %s",
+                    aggregateIdExtractor.apply(event),
+                    aggregateName,
+                    expectedAggregateVersion + 1
+            );
+            if (isOptimisticLockingRelated(ex)) {
+                throw new OptimisticLockingException(message, ex);
+            } else {
+                throw new EventStoreException(message, ex);
+            }
+        }
+    }
+
+    @Override
+    public void ensureStreamExist(UUID aggregateId, String aggregateName) {
         try (
                 Connection con = dataSource.getConnection();
                 PreparedStatement pst = con.prepareStatement(SAVE_STREAM_QUERY)
@@ -165,6 +219,10 @@ public class PostgresEventStore<E> implements EventStore<E> {
             result.add(event);
         }
         return result;
+    }
+
+    private boolean isOptimisticLockingRelated(Exception ex) {
+        return ex.getMessage().contains("unique constraint \"aggregate_version_uq\"");
     }
 
 }

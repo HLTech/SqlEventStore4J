@@ -2,6 +2,9 @@ package com.hltech.store
 
 import spock.lang.Specification
 
+import java.util.concurrent.Executors
+
+import static java.util.concurrent.CompletableFuture.runAsync
 import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
 
 abstract class EventStoreIT extends Specification {
@@ -10,6 +13,9 @@ abstract class EventStoreIT extends Specification {
     DummyEventBodyMapper eventBodyMapper = new DummyEventBodyMapper()
 
     def "save should be able to save events in database"() {
+
+        given: 'Stream for aggregates exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
 
         when: 'Events saved'
             AGGREGATE_EVENTS.each { eventStore.save(it, AGGREGATE_NAME) }
@@ -28,6 +34,69 @@ abstract class EventStoreIT extends Specification {
                 assert rows[idx]['event_name'] == "DummyEvent"
                 assert rows[idx]['event_version'] == 1
             }
+
+    }
+
+    def "save in parallel for single aggregate should set valid aggregate version"() {
+
+        given: 'Stream for aggregate exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+
+        when: 'Saving 100 events in parallel for aggregate'
+            def threadPool = Executors.newFixedThreadPool(10)
+            (1..100).collect {
+                threadPool.submit { eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME) }
+            }.each { it.get() }
+
+        then: 'Actual aggregate version is 100'
+            assert getAggregateVersion(AGGREGATE_ID, AGGREGATE_NAME) == 100
+
+        cleanup:
+            threadPool.shutdown()
+
+    }
+
+    def "save in parallel for multiple aggregate should set valid aggregates version"() {
+
+        given: 'Stream for aggregates exist'
+            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createAggregateInStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME, STREAM_ID)
+            createAggregateInStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createAggregateInStream(ANOTHER_AGGREGATE_ID, ANOTHER_AGGREGATE_NAME, STREAM_ID)
+
+        when: 'Saving events in parallel for multiple aggregates'
+            def threadPool = Executors.newFixedThreadPool(10)
+            [
+                    runAsync {
+                        (1..70).collect {
+                            threadPool.submit { eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME) }
+                        }.each { it.get() }
+                    },
+                    runAsync {
+                        (1..30).collect {
+                            threadPool.submit { eventStore.save(new DummyEvent(AGGREGATE_ID), ANOTHER_AGGREGATE_NAME) }
+                        }.each { it.get() }
+                    },
+                    runAsync {
+                        (1..50).collect {
+                            threadPool.submit { eventStore.save(new DummyEvent(ANOTHER_AGGREGATE_ID), AGGREGATE_NAME) }
+                        }.each { it.get() }
+                    },
+                    runAsync {
+                        (1..80).collect {
+                            threadPool.submit { eventStore.save(new DummyEvent(ANOTHER_AGGREGATE_ID), ANOTHER_AGGREGATE_NAME) }
+                        }.each { it.get() }
+                    }
+            ].each { it.get() }
+
+        then: 'Actual versions of aggregates as expected'
+            assert getAggregateVersion(AGGREGATE_ID, AGGREGATE_NAME) == 70
+            assert getAggregateVersion(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME) == 30
+            assert getAggregateVersion(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME) == 50
+            assert getAggregateVersion(ANOTHER_AGGREGATE_ID, ANOTHER_AGGREGATE_NAME) == 80
+
+        cleanup:
+            threadPool.shutdown()
 
     }
 
@@ -218,6 +287,13 @@ abstract class EventStoreIT extends Specification {
     )
 
     abstract EventStore<DummyBaseEvent> getEventStore()
+
+    private int getAggregateVersion(
+            UUID aggregateId,
+            String aggregateName
+    ) {
+        (int) dbClient.firstRow("select max(aggregate_version) as aggregate_version from event where aggregate_id = $aggregateId and aggregate_name = $aggregateName")['aggregate_version']
+    }
 
     static AGGREGATE_ID = UUID.randomUUID()
     static AGGREGATE_EVENTS = [

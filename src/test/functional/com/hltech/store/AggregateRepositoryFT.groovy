@@ -33,8 +33,11 @@ class AggregateRepositoryFT extends Specification implements PostgreSQLContainer
             eventTypeMapper.registerMapping(DummyEvent, "DummyEvent", 1)
             eventTypeMapper.registerMapping(AnotherDummyEvent, "AnotherDummyEvent", 1)
 
-        and: 'Events saved in repository'
+        and: 'Stream for aggregate exist'
             UUID aggregateId = UUID.randomUUID()
+            repository.ensureStreamExist(aggregateId)
+
+        and: 'Events saved in repository'
             def dummyEvent = new DummyEvent(aggregateId)
             repository.save(dummyEvent)
             def anotherDummyEvent = new AnotherDummyEvent(aggregateId)
