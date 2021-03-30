@@ -1,17 +1,17 @@
 package com.hltech.store
 
 import groovy.sql.Sql
-import groovy.util.logging.Slf4j
 import org.flywaydb.core.Flyway
 import org.postgresql.ds.PGSimpleDataSource
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.testcontainers.containers.PostgreSQLContainer
-import spock.lang.Specification
 
 import javax.sql.DataSource
 
-@Slf4j
-class PostgreSQLContainerTest extends Specification {
+trait PostgreSQLContainerTest {
 
+    static Logger log = LoggerFactory.getLogger(PostgreSQLContainerTest.class)
     static PostgreSQLContainer postgreSQLContainer
     static Sql dbClient
     static DataSource dataSource
