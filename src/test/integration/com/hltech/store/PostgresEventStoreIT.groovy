@@ -14,6 +14,10 @@ class PostgresEventStoreIT extends EventStoreIT implements PostgreSQLContainerTe
             dataSource
     )
 
+    UUID databaseUUIDToUUID(Object databaseUUID) {
+        return (UUID) databaseUUID
+    }
+
     String databasePayloadToString(Object databasePayload) {
         databasePayload.toString()
     }

@@ -19,8 +19,8 @@ abstract class EventStoreIT extends Specification {
 
         and: 'Table rows for events as expected'
             AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
-                assert rows[idx]['id'] == event.id
-                assert rows[idx]['aggregate_id'] == event.aggregateId
+                assert databaseUUIDToUUID(rows[idx]['id']) == event.id
+                assert databaseUUIDToUUID(rows[idx]['aggregate_id']) == event.aggregateId
                 assert rows[idx]['aggregate_name'] == AGGREGATE_NAME
                 assert rows[idx]['stream_id'] != null
                 assert databasePayloadToString(rows[idx]['payload']).replaceAll(" ", "") == eventBodyMapper.eventToString(event).replaceAll(" ", "")
@@ -201,6 +201,8 @@ abstract class EventStoreIT extends Specification {
             events.empty
 
     }
+
+    abstract UUID databaseUUIDToUUID(Object databasePayload)
 
     abstract String databasePayloadToString(Object databasePayload)
 
