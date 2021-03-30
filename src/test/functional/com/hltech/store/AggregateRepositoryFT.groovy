@@ -1,11 +1,12 @@
 package com.hltech.store
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import spock.lang.Specification
 import spock.lang.Subject
 
 import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
 
-class AggregateRepositoryFT extends PostgreSQLContainerTest {
+class AggregateRepositoryFT extends Specification implements PostgreSQLContainerTest {
 
     EventTypeMapper<DummyBaseEvent> eventTypeMapper = new SimpleEventTypeMapper<>()
     EventBodyMapper<DummyBaseEvent> eventBodyMapper = new JacksonEventBodyMapper<>(new ObjectMapper())
