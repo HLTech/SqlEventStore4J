@@ -21,20 +21,23 @@ class AggregateRepositoryFT extends Specification implements PostgreSQLContainer
     @Subject
     def repository = new AggregateRepository<DummyAggregate, DummyBaseEvent>(
             eventStore,
+            AGGREGATE_NAME,
             DummyAggregate.INITIAL_STATE_SUPPLIER,
             DummyAggregate.EVENT_APPLIER,
-            AGGREGATE_NAME
-
+            DummyAggregate.VERSION_APPLIER
     )
 
-    def "find should return aggregate with events applied"() {
+    def "find should return aggregate with events and version applied"() {
 
         given: 'Events types mapping registered'
             eventTypeMapper.registerMapping(DummyEvent, "DummyEvent", 1)
             eventTypeMapper.registerMapping(AnotherDummyEvent, "AnotherDummyEvent", 1)
 
-        and: 'Events saved in repository'
+        and: 'Stream for aggregate exist'
             UUID aggregateId = UUID.randomUUID()
+            repository.ensureStreamExist(aggregateId)
+
+        and: 'Events saved in repository'
             def dummyEvent = new DummyEvent(aggregateId)
             repository.save(dummyEvent)
             def anotherDummyEvent = new AnotherDummyEvent(aggregateId)
@@ -48,6 +51,9 @@ class AggregateRepositoryFT extends Specification implements PostgreSQLContainer
 
         and: 'Events applied'
             aggregate.get().appliedEvents == [dummyEvent, anotherDummyEvent]
+
+        and: 'Version applied'
+            aggregate.get().version == 2
 
     }
 

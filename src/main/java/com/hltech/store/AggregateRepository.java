@@ -11,20 +11,42 @@ import static java.util.stream.Collectors.toList;
 public class AggregateRepository<A, E> {
 
     private final EventStore<E> eventStore;
+    private final String aggregateName;
     private final Supplier<A> initialAggregateStateSupplier;
     private final BiFunction<A, E, A> eventApplier;
-    private final String aggregateName;
+    private final BiFunction<A, Integer, A> aggregateVersionApplier;
 
     public AggregateRepository(
             EventStore<E> eventStore,
+            String aggregateName,
             Supplier<A> initialAggregateStateSupplier,
             BiFunction<A, E, A> eventApplier,
-            String aggregateName
+            BiFunction<A, Integer, A> aggregateVersionApplier
     ) {
         this.eventStore = eventStore;
         this.initialAggregateStateSupplier = initialAggregateStateSupplier;
         this.eventApplier = eventApplier;
         this.aggregateName = aggregateName;
+        this.aggregateVersionApplier = aggregateVersionApplier;
+    }
+
+    public AggregateRepository(
+            EventStore<E> eventStore,
+            String aggregateName,
+            Supplier<A> initialAggregateStateSupplier,
+            BiFunction<A, E, A> eventApplier
+    ) {
+        this(
+                eventStore,
+                aggregateName,
+                initialAggregateStateSupplier,
+                eventApplier,
+                (aggregate, version) -> aggregate
+        );
+    }
+
+    public void ensureStreamExist(UUID aggregateId) {
+        eventStore.ensureStreamExist(aggregateId, aggregateName);
     }
 
     public void save(E event) {
@@ -35,7 +57,7 @@ public class AggregateRepository<A, E> {
             UUID aggregateId
     ) {
         List<E> events = eventStore.findAll(aggregateId, aggregateName);
-        return eventsToAggregate(events);
+        return toAggregate(events);
     }
 
     public A get(UUID aggregateId) {
@@ -45,7 +67,7 @@ public class AggregateRepository<A, E> {
 
     public Optional<A> findToEvent(E toEvent) {
         List<E> events = eventStore.findAllToEvent(toEvent, aggregateName);
-        return eventsToAggregate(events);
+        return toAggregate(events);
     }
 
     public A getToEvent(E toEvent) {
@@ -58,12 +80,12 @@ public class AggregateRepository<A, E> {
                 .findAll(aggregateName)
                 .values()
                 .stream()
-                .map(this::eventsToAggregate)
+                .map(this::toAggregate)
                 .map(Optional::get)
                 .collect(toList());
     }
 
-    private Optional<A> eventsToAggregate(List<E> events) {
+    private Optional<A> toAggregate(List<E> events) {
         if (events.isEmpty()) {
             return Optional.empty();
         } else {
@@ -72,10 +94,9 @@ public class AggregateRepository<A, E> {
             for (E event : events) {
                 aggregate = eventApplier.apply(aggregate, event);
             }
-
+            aggregate = aggregateVersionApplier.apply(aggregate, events.size());
             return Optional.of(aggregate);
         }
     }
 
 }
-

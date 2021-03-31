@@ -1,5 +1,6 @@
 package com.hltech.store;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,28 +22,49 @@ import static java.util.stream.Collectors.groupingBy;
 @RequiredArgsConstructor
 public class PostgresEventStore<E> implements EventStore<E> {
 
-    private static final String SAVE_EVENT_QUERY = "insert into event(id, aggregate_id, aggregate_name, stream_id, payload, event_name, event_version) "
-            + "SELECT ?::uuid, ais.aggregate_id, ais.aggregate_name, ais.stream_id, ?::JSONB, ?, ? "
+    private static final String SAVE_EVENT_QUERY =
+            "INSERT INTO event(id, aggregate_version, stream_id, payload, event_name, event_version) "
+            + "VALUES (?::uuid, ?, ?::uuid, ?::JSONB, ?, ?) ";
+
+    private static final String ENSURE_STREAM_EXIST_QUERY =
+            "INSERT INTO aggregate_in_stream(aggregate_id, aggregate_name, aggregate_version, stream_id) "
+            + "VALUES(?::uuid, ?, 0, ?) ON CONFLICT DO NOTHING";
+
+    private static final String LOCK_STREAM =
+            "SELECT stream_id, aggregate_id, aggregate_name, aggregate_version "
+            + "FROM aggregate_in_stream "
+            + "WHERE aggregate_id = ?::UUID "
+            + "AND aggregate_name = ? "
+            + "FOR UPDATE";
+
+    private static final String INCREMENT_AGGREGATE_VERSION =
+            "UPDATE aggregate_in_stream "
+            + "SET aggregate_version = ? "
+            + "WHERE aggregate_id = ?::UUID "
+            + "AND aggregate_name = ? ";
+
+    public static final String FIND_ALL_BY_AGGREGATE_NAME_QUERY =
+            "SELECT e.payload, e.event_name, e.event_version "
             + "FROM aggregate_in_stream ais "
-            + "WHERE ais.aggregate_id = ? "
-            + "AND ais.aggregate_name = ?";
-    private static final String SAVE_STREAM_QUERY = "insert into aggregate_in_stream(aggregate_id, aggregate_name, stream_id) "
-            + "VALUES(?::uuid, ?, ?)";
-    private static final String FIND_ALL_BY_AGGREGATE_NAME_QUERY = "SELECT payload, event_name, event_version "
-            + "FROM event "
-            + "WHERE aggregate_name = ? "
-            + "ORDER BY order_of_occurrence ASC";
-    private static final String FIND_ALL_BY_AGGREGATE_ID_AND_AGGREGATE_NAME_QUERY = "SELECT payload, event_name, event_version "
-            + "FROM event "
-            + "WHERE aggregate_id = ?::UUID "
-            + "AND aggregate_name = ? "
-            + "ORDER BY order_of_occurrence ASC";
-    private static final String FIND_ALL_TO_EVENT_QUERY = "SELECT payload, event_name, event_version "
-            + "FROM event "
-            + "WHERE aggregate_id = ?::UUID "
-            + "AND aggregate_name = ? "
-            + "and order_of_occurrence <= (select order_of_occurrence from event where id = ?::UUID) "
-            + "ORDER BY order_of_occurrence ASC";
+            + "JOIN event e ON e.stream_id = ais.stream_id "
+            + "WHERE ais.aggregate_name = ? "
+            + "ORDER BY e.order_of_occurrence ASC";
+
+    private static final String FIND_ALL_BY_AGGREGATE_ID_AND_AGGREGATE_NAME_QUERY =
+            "SELECT e.payload, e.event_name, e.event_version "
+            + "FROM aggregate_in_stream ais "
+            + "JOIN event e ON e.stream_id = ais.stream_id "
+            + "WHERE ais.aggregate_id = ?::UUID "
+            + "AND ais.aggregate_name = ? "
+            + "ORDER BY e.order_of_occurrence ASC";
+    private static final String FIND_ALL_TO_EVENT_QUERY =
+            "SELECT e.payload, e.event_name, e.event_version "
+            + "FROM aggregate_in_stream ais "
+            + "JOIN event e ON e.stream_id = ais.stream_id "
+            + "WHERE ais.aggregate_id = ?::UUID "
+            + "AND ais.aggregate_name = ? "
+            + "AND e.order_of_occurrence <= (SELECT order_of_occurrence FROM event WHERE id = ?::UUID) "
+            + "ORDER BY e.order_of_occurrence ASC";
 
     private final Function<E, UUID> eventIdExtractor;
     private final Function<E, UUID> aggregateIdExtractor;
@@ -55,35 +77,58 @@ public class PostgresEventStore<E> implements EventStore<E> {
             E event,
             String aggregateName
     ) {
-        try (
-                Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(SAVE_EVENT_QUERY)
-        ) {
-            pst.setObject(1, eventIdExtractor.apply(event));
-            pst.setObject(2, eventBodyMapper.eventToString(event));
-            pst.setObject(3, eventTypeMapper.toName((Class<? extends E>) event.getClass()));
-            pst.setObject(4, eventTypeMapper.toVersion((Class<? extends E>) event.getClass()));
-            pst.setObject(5, aggregateIdExtractor.apply(event));
-            pst.setString(6, aggregateName);
-
-            if (pst.executeUpdate() == 0) {
-                // This is the very first event for the aggregate so we have to create stream for that aggregate
-                createStreamForAggregate(aggregateIdExtractor.apply(event), aggregateName);
-                save(event, aggregateName);
-            }
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            AggregateInStream aggregateInStream = lockStream(connection, aggregateIdExtractor.apply(event), aggregateName);
+            saveEvent(connection, event, aggregateInStream);
+            incrementAggregateVersion(connection, aggregateInStream);
+            connection.commit();
         } catch (SQLException ex) {
             throw new EventStoreException(
-                    String.format("Could not save event to database with aggregateId %s and aggregateName %s", aggregateIdExtractor.apply(event), aggregateName),
+                    String.format(
+                            "Could not save event to database with aggregateId %s and aggregateName %s",
+                            aggregateIdExtractor.apply(event),
+                            aggregateName
+                    ),
                     ex
             );
         }
     }
 
-    public void createStreamForAggregate(UUID aggregateId, String aggregateName) {
+    @Override
+    public void save(
+            E event,
+            String aggregateName,
+            int expectedAggregateVersion
+    ) {
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            AggregateInStream aggregateInStream = lockStream(connection, aggregateIdExtractor.apply(event), aggregateName);
+            if (aggregateInStream.getAggregateVersion() != expectedAggregateVersion) {
+                throw new OptimisticLockingException(aggregateIdExtractor.apply(event), aggregateName, expectedAggregateVersion);
+            }
+            saveEvent(connection, event, aggregateInStream);
+            incrementAggregateVersion(connection, aggregateInStream);
+            connection.commit();
+        } catch (SQLException ex) {
+            throw new EventStoreException(
+                    String.format(
+                            "Could not save event to database with aggregateId %s and aggregateName %s",
+                            aggregateIdExtractor.apply(event),
+                            aggregateName
+                    ),
+                    ex
+            );
+        }
+    }
+
+    @Override
+    public void ensureStreamExist(UUID aggregateId, String aggregateName) {
         try (
-                Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(SAVE_STREAM_QUERY)
+                Connection connection = dataSource.getConnection();
+                PreparedStatement pst = connection.prepareStatement(ENSURE_STREAM_EXIST_QUERY)
         ) {
+            connection.setAutoCommit(true);
             pst.setObject(1, aggregateId);
             pst.setObject(2, aggregateName);
             pst.setObject(3, randomUUID());
@@ -153,6 +198,58 @@ public class PostgresEventStore<E> implements EventStore<E> {
         }
     }
 
+    private void saveEvent(
+            Connection connection,
+            E event,
+            AggregateInStream aggregateInStream
+    ) throws SQLException {
+        try (PreparedStatement pst = connection.prepareStatement(SAVE_EVENT_QUERY)) {
+            pst.setObject(1, eventIdExtractor.apply(event));
+            pst.setObject(2, aggregateInStream.getAggregateVersion() + 1);
+            pst.setObject(3, aggregateInStream.getStreamId());
+            pst.setObject(4, eventBodyMapper.eventToString(event));
+            pst.setObject(5, eventTypeMapper.toName((Class<? extends E>) event.getClass()));
+            pst.setObject(6, eventTypeMapper.toVersion((Class<? extends E>) event.getClass()));
+            pst.executeUpdate();
+        }
+    }
+
+    private AggregateInStream lockStream(
+            Connection connection,
+            UUID aggregateId,
+            String aggregateName
+    ) throws SQLException {
+        try (
+                PreparedStatement pst = connection.prepareStatement(LOCK_STREAM)
+        ) {
+            pst.setObject(1, aggregateId);
+            pst.setString(2, aggregateName);
+            ResultSet rs = pst.executeQuery();
+            if (!rs.next()) {
+                throw new StreamNotExistException(aggregateId, aggregateName);
+            }
+            return new AggregateInStream(
+                    aggregateId,
+                    aggregateName,
+                    rs.getInt("aggregate_version"),
+                    (UUID) rs.getObject("stream_id")
+            );
+
+        }
+    }
+
+    private void incrementAggregateVersion(
+            Connection connection,
+            AggregateInStream aggregateInStream
+    ) throws SQLException {
+        try (PreparedStatement pst = connection.prepareStatement(INCREMENT_AGGREGATE_VERSION)) {
+            pst.setObject(1, aggregateInStream.getAggregateVersion() + 1);
+            pst.setObject(2, aggregateInStream.getAggregateId());
+            pst.setObject(3, aggregateInStream.getAggregateName());
+            pst.executeUpdate();
+        }
+    }
+
     private List<E> extractEventsFromResultSet(ResultSet rs) throws SQLException {
         List<E> result = new ArrayList<>();
 
@@ -165,6 +262,17 @@ public class PostgresEventStore<E> implements EventStore<E> {
             result.add(event);
         }
         return result;
+    }
+
+    @RequiredArgsConstructor
+    @Getter
+    private static class AggregateInStream {
+
+        final UUID aggregateId;
+        final String aggregateName;
+        final int aggregateVersion;
+        final UUID streamId;
+
     }
 
 }

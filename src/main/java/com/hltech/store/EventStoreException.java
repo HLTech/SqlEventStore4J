@@ -1,11 +1,13 @@
 package com.hltech.store;
 
-class EventStoreException extends RuntimeException {
-    EventStoreException(String message) {
+public class EventStoreException extends RuntimeException {
+
+    public EventStoreException(String message) {
         super(message);
     }
 
-    EventStoreException(String message, Throwable cause) {
+    public EventStoreException(String message, Throwable cause) {
         super(message, cause);
     }
+
 }
