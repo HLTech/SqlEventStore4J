@@ -10,9 +10,10 @@ class AggregateRepositoryUT extends Specification {
     @Subject
     AggregateRepository<DummyAggregate, DummyBaseEvent> repository = new AggregateRepository(
             eventStore,
+            AGGREGATE_NAME,
             DummyAggregate.INITIAL_STATE_SUPPLIER,
             DummyAggregate.EVENT_APPLIER,
-            AGGREGATE_NAME
+            DummyAggregate.VERSION_APPLIER
     )
 
     def "save should save event in event store in a proper stream"() {
@@ -38,6 +39,9 @@ class AggregateRepositoryUT extends Specification {
 
         and: 'Events applied'
             aggregate.get().appliedEvents == [EVENT]
+
+        and: 'Version applied'
+            aggregate.get().version == 1
 
     }
 
@@ -67,6 +71,9 @@ class AggregateRepositoryUT extends Specification {
 
         and: 'Events applied'
             aggregate.appliedEvents == [EVENT]
+
+        and: 'Version applied'
+            aggregate.version == 1
 
     }
 
@@ -98,6 +105,9 @@ class AggregateRepositoryUT extends Specification {
         and: 'Events applied'
             aggregate.get().appliedEvents == [EVENT]
 
+        and: 'Version applied'
+            aggregate.get().version == 1
+
     }
 
     def "findToEvent should not return aggregate when there is no events for aggregate in event store"() {
@@ -126,6 +136,9 @@ class AggregateRepositoryUT extends Specification {
 
         and: 'Events applied'
             aggregate.appliedEvents == [EVENT]
+
+        and: 'Version applied'
+            aggregate.version == 1
 
     }
 
@@ -156,6 +169,9 @@ class AggregateRepositoryUT extends Specification {
 
         and: 'Events applied'
             aggregates[0].appliedEvents == [EVENT]
+
+        and: 'Version applied'
+            aggregates[0].version == 1
 
     }
 
