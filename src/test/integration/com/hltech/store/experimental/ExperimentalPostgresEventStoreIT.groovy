@@ -1,12 +1,13 @@
-package com.hltech.store
+package com.hltech.store.experimental
 
-
+import com.hltech.store.DummyBaseEvent
+import com.hltech.store.EventStore
 import spock.lang.Subject
 
-class PostgresEventStoreIT extends EventStoreIT implements PostgreSQLContainerTest {
+class ExperimentalPostgresEventStoreIT extends ExperimantalEventStoreIT implements ExperimentalPostgreSQLContainerTest {
 
     @Subject
-    EventStore<DummyBaseEvent> eventStore = new PostgresEventStore(
+    EventStore<DummyBaseEvent> eventStore = new ExperimentalPostgresEventStore(
             DummyBaseEvent.EVENT_ID_EXTRACTOR,
             DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
             eventTypeMapper,
@@ -22,13 +23,12 @@ class PostgresEventStoreIT extends EventStoreIT implements PostgreSQLContainerTe
         databasePayload.toString()
     }
 
-    UUID createStream(
+    void createAggregateInStream(
             UUID aggregateId,
-            String aggregateName
+            String aggregateName,
+            UUID streamId
     ){
-        UUID streamId = UUID.randomUUID()
-        dbClient.execute("INSERT INTO AGGREGATE_IN_STREAM VALUES (?::UUID, ?, 0, ?::UUID)", [aggregateId, aggregateName, streamId])
-        return streamId
+        dbClient.execute("INSERT INTO AGGREGATE_IN_STREAM VALUES (?::UUID, ?, ?::UUID)", [aggregateId, aggregateName, streamId])
     }
 
     void insertEventsToDatabase(
@@ -38,12 +38,8 @@ class PostgresEventStoreIT extends EventStoreIT implements PostgreSQLContainerTe
         events.eachWithIndex { DummyBaseEvent event, int idx ->
             String payload = eventBodyMapper.eventToString(event)
             dbClient.execute(
-                    "INSERT INTO EVENT (ID, AGGREGATE_VERSION, STREAM_ID, PAYLOAD, EVENT_NAME, EVENT_VERSION) SELECT ?, ?, stream_id, ?::JSONB, ?, ? from aggregate_in_stream where aggregate_id = ? AND aggregate_name = ?",
-                    [event.id, idx, payload, "DummyEvent", 1, event.aggregateId, aggregateName]
-            )
-            dbClient.execute(
-                    "UPDATE aggregate_in_stream SET aggregate_version = aggregate_version + 1 where aggregate_id = ? AND aggregate_name = ?",
-                    [event.aggregateId, aggregateName]
+                    "INSERT INTO EVENT (ID, AGGREGATE_ID, AGGREGATE_NAME, AGGREGATE_VERSION, STREAM_ID, PAYLOAD, EVENT_NAME, EVENT_VERSION) VALUES (?::UUID, ?::UUID, ?, ?, ?::UUID, ?::JSONB, ?, ?)",
+                    [event.id, event.aggregateId, aggregateName, idx, ExperimantalEventStoreIT.STREAM_ID, payload, "DummyEvent", 1]
             )
         }
     }
@@ -52,7 +48,7 @@ class PostgresEventStoreIT extends EventStoreIT implements PostgreSQLContainerTe
             UUID aggregateId,
             String aggregateName
     ) {
-        (int) dbClient.firstRow("select aggregate_version from aggregate_in_stream where aggregate_id = $aggregateId and aggregate_name = $aggregateName")['aggregate_version']
+        (int) dbClient.firstRow("select max(aggregate_version) as aggregate_version from event where aggregate_id = $aggregateId and aggregate_name = $aggregateName")['aggregate_version']
     }
 
     boolean streamExist(

@@ -1,4 +1,4 @@
-package com.hltech.store
+package com.hltech.store.experimental
 
 import groovy.sql.Sql
 import org.flywaydb.core.Flyway
@@ -9,9 +9,9 @@ import org.testcontainers.containers.PostgreSQLContainer
 
 import javax.sql.DataSource
 
-trait PostgreSQLContainerTest {
+trait ExperimentalPostgreSQLContainerTest {
 
-    static Logger log = LoggerFactory.getLogger(PostgreSQLContainerTest.class)
+    static Logger log = LoggerFactory.getLogger(ExperimentalPostgreSQLContainerTest.class)
     static PostgreSQLContainer postgreSQLContainer
     static Sql dbClient
     static DataSource dataSource
@@ -47,7 +47,7 @@ trait PostgreSQLContainerTest {
     static void migrateDbScripts() {
         Flyway flyway = Flyway
                 .configure()
-                .locations("db/migration/postgres")
+                .locations("db/migration/postgres-experimental")
                 .dataSource(
                         postgreSQLContainer.getJdbcUrl(),
                         postgreSQLContainer.getUsername(),
