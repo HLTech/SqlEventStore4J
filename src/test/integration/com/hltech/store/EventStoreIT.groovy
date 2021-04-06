@@ -22,7 +22,7 @@ abstract class EventStoreIT extends Specification {
             AGGREGATE_EVENTS.each { eventStore.save(it, AGGREGATE_NAME) }
 
         then: 'All events exist in database'
-            def rows = dbClient.rows("select * from event where stream_id = '${streamId}' order by aggregate_version asc")
+            def rows = dbClient.rows("select * from event where stream_id = '$streamId' order by aggregate_version asc")
 
         and: 'Table rows for events as expected'
             AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
@@ -100,14 +100,14 @@ abstract class EventStoreIT extends Specification {
 
     }
 
-    def "save should throw exception when stream for aggregate does not exist"() {
+    def "save should create stream for aggregate when it does not exist"() {
 
         when: 'Save event'
             eventStore.save(AGGREGATE_EVENTS[0], AGGREGATE_NAME)
 
-        then: 'All events exist in database'
-            def ex = thrown(StreamNotExistException)
-            ex.message == "Could not save event because stream does not exist from aggregateId $AGGREGATE_ID and aggregateName $AGGREGATE_NAME"
+        then: 'Stream created'
+            def row  = dbClient.firstRow("select * from aggregate_in_stream where aggregate_id = '$AGGREGATE_ID' and aggregate_name = $AGGREGATE_NAME")
+            row['stream_id'] != null
 
     }
 
@@ -122,7 +122,7 @@ abstract class EventStoreIT extends Specification {
             }
 
         then: 'All events exist in database'
-            def rows = dbClient.rows("select * from event where stream_id = '${streamId}' order by aggregate_version asc")
+            def rows = dbClient.rows("select * from event where stream_id = '$streamId' order by aggregate_version asc")
 
         and: 'Table rows for events as expected'
             AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
@@ -252,40 +252,14 @@ abstract class EventStoreIT extends Specification {
 
     }
 
-    def "save with optimistic locking should throw exception when stream for aggregate does not exist"() {
+    def "save with optimistic locking should create stream for aggregate when it does not exist"() {
 
         when: 'Save event'
             eventStore.save(AGGREGATE_EVENTS[0], AGGREGATE_NAME, 0)
 
-        then: 'Exception thrown'
-            def ex = thrown(StreamNotExistException)
-            ex.message == "Could not save event because stream does not exist from aggregateId $AGGREGATE_ID and aggregateName $AGGREGATE_NAME"
-
-    }
-
-    def "ensureStreamExist should create stream when it not exist"() {
-
-        when: 'Ensure stream exist for aggregate'
-            eventStore.ensureStreamExist(AGGREGATE_ID, AGGREGATE_NAME)
-
         then: 'Stream created'
-            assert streamExist(AGGREGATE_ID, AGGREGATE_NAME)
-
-    }
-
-    def "ensureStreamExist should not throw exception when stream already exist"() {
-
-        given: 'Stream exist for aggregate'
-            eventStore.ensureStreamExist(AGGREGATE_ID, AGGREGATE_NAME)
-
-        when: 'Ensure stream exist for same aggregate'
-            eventStore.ensureStreamExist(AGGREGATE_ID, AGGREGATE_NAME)
-
-        then: 'Exception not thrown'
-            noExceptionThrown()
-
-        and: 'Stream exist for aggregate'
-            assert streamExist(AGGREGATE_ID, AGGREGATE_NAME)
+            def row  = dbClient.firstRow("select * from aggregate_in_stream where aggregate_id = '$AGGREGATE_ID' and aggregate_name = $AGGREGATE_NAME")
+            row['stream_id'] != null
 
     }
 

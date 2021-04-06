@@ -123,25 +123,6 @@ public class PostgresEventStore<E> implements EventStore<E> {
     }
 
     @Override
-    public void ensureStreamExist(UUID aggregateId, String aggregateName) {
-        try (
-                Connection connection = dataSource.getConnection();
-                PreparedStatement pst = connection.prepareStatement(ENSURE_STREAM_EXIST_QUERY)
-        ) {
-            connection.setAutoCommit(true);
-            pst.setObject(1, aggregateId);
-            pst.setObject(2, aggregateName);
-            pst.setObject(3, randomUUID());
-            pst.executeUpdate();
-        } catch (SQLException ex) {
-            throw new EventStoreException(
-                    String.format("Could not create stream for aggregateId %s and aggregateName %s", aggregateId, aggregateName),
-                    ex
-            );
-        }
-    }
-
-    @Override
     public Map<UUID, List<E>> findAll(String aggregateName) {
         try (
                 Connection con = dataSource.getConnection();
@@ -226,7 +207,8 @@ public class PostgresEventStore<E> implements EventStore<E> {
             pst.setString(2, aggregateName);
             ResultSet rs = pst.executeQuery();
             if (!rs.next()) {
-                throw new StreamNotExistException(aggregateId, aggregateName);
+                ensureStreamExist(connection, aggregateId, aggregateName);
+                return lockStream(connection, aggregateId, aggregateName);
             }
             return new AggregateInStream(
                     aggregateId,
@@ -235,6 +217,19 @@ public class PostgresEventStore<E> implements EventStore<E> {
                     (UUID) rs.getObject("stream_id")
             );
 
+        }
+    }
+
+    private void ensureStreamExist(
+            Connection connection,
+            UUID aggregateId,
+            String aggregateName
+    ) throws SQLException {
+        try (PreparedStatement pst = connection.prepareStatement(ENSURE_STREAM_EXIST_QUERY)) {
+            pst.setObject(1, aggregateId);
+            pst.setObject(2, aggregateName);
+            pst.setObject(3, randomUUID());
+            pst.executeUpdate();
         }
     }
 
