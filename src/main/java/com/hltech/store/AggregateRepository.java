@@ -45,10 +45,6 @@ public class AggregateRepository<A, E> {
         );
     }
 
-    public void ensureStreamExist(UUID aggregateId) {
-        eventStore.ensureStreamExist(aggregateId, aggregateName);
-    }
-
     public void save(E event) {
         eventStore.save(event, aggregateName);
     }

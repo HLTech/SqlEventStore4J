@@ -6,8 +6,6 @@ import java.util.UUID;
 
 public interface EventStore<E> {
 
-    void ensureStreamExist(UUID aggregateId, String aggregateName);
-
     void save(
             E event,
             String aggregateName
