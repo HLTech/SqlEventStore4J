@@ -44,7 +44,7 @@ trait PostgreSQLContainerTest {
         dataSource.setUrl(postgreSQLContainer.getJdbcUrl())
     }
 
-    private static void migrateDbScripts() {
+    static void migrateDbScripts() {
         Flyway flyway = Flyway
                 .configure()
                 .locations("db/migration/postgres")

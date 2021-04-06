@@ -1,5 +1,5 @@
 checkstyle {
-    toolVersion "8.14"
+    toolVersion "8.36.2"
 }
 
 jacocoTestReport {

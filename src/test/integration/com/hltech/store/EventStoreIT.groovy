@@ -2,6 +2,10 @@ package com.hltech.store
 
 import spock.lang.Specification
 
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
+
+import static java.util.concurrent.CompletableFuture.runAsync
 import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
 
 abstract class EventStoreIT extends Specification {
@@ -11,18 +15,20 @@ abstract class EventStoreIT extends Specification {
 
     def "save should be able to save events in database"() {
 
+        given: 'Stream for aggregates exist'
+            UUID streamId = createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
         when: 'Events saved'
             AGGREGATE_EVENTS.each { eventStore.save(it, AGGREGATE_NAME) }
 
         then: 'All events exist in database'
-            def rows = dbClient.rows("select * from event where aggregate_id = '${AGGREGATE_ID}' order by order_of_occurrence asc")
+            def rows = dbClient.rows("select * from event where stream_id = '${streamId}' order by aggregate_version asc")
 
         and: 'Table rows for events as expected'
             AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
                 assert databaseUUIDToUUID(rows[idx]['id']) == event.id
-                assert databaseUUIDToUUID(rows[idx]['aggregate_id']) == event.aggregateId
-                assert rows[idx]['aggregate_name'] == AGGREGATE_NAME
-                assert rows[idx]['stream_id'] != null
+                assert rows[idx]['aggregate_version'] == idx + 1
+                assert databaseUUIDToUUID(rows[idx]['stream_id']) == streamId
                 assert databasePayloadToString(rows[idx]['payload']).replaceAll(" ", "") == eventBodyMapper.eventToString(event).replaceAll(" ", "")
                 assert rows[idx]['order_of_occurrence'] != null
                 assert rows[idx]['event_name'] == "DummyEvent"
@@ -31,11 +37,263 @@ abstract class EventStoreIT extends Specification {
 
     }
 
+    def "save in parallel for single aggregate should set valid aggregate version"() {
+
+        given: 'Stream for aggregate exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
+        when: 'Saving 100 events in parallel for aggregate'
+            def threadPool = Executors.newFixedThreadPool(10)
+            (1..100).collect {
+                threadPool.submit { eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME) }
+            }.each { it.get() }
+
+        then: 'Actual aggregate version is 100'
+            assert getAggregateVersion(AGGREGATE_ID, AGGREGATE_NAME) == 100
+
+        cleanup:
+            threadPool.shutdown()
+
+    }
+
+    def "save in parallel for multiple aggregate should set valid aggregates versions"() {
+
+        given: 'Stream for aggregates exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, ANOTHER_AGGREGATE_NAME)
+
+        when: 'Saving events in parallel for multiple aggregates'
+            def threadPool = Executors.newFixedThreadPool(10)
+            [
+                    runAsync {
+                        (1..70).collect {
+                            threadPool.submit { eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME) }
+                        }.each { it.get() }
+                    },
+                    runAsync {
+                        (1..30).collect {
+                            threadPool.submit { eventStore.save(new DummyEvent(AGGREGATE_ID), ANOTHER_AGGREGATE_NAME) }
+                        }.each { it.get() }
+                    },
+                    runAsync {
+                        (1..50).collect {
+                            threadPool.submit { eventStore.save(new DummyEvent(ANOTHER_AGGREGATE_ID), AGGREGATE_NAME) }
+                        }.each { it.get() }
+                    },
+                    runAsync {
+                        (1..80).collect {
+                            threadPool.submit { eventStore.save(new DummyEvent(ANOTHER_AGGREGATE_ID), ANOTHER_AGGREGATE_NAME) }
+                        }.each { it.get() }
+                    }
+            ].each { it.get() }
+
+        then: 'Actual versions of aggregates as expected'
+            assert getAggregateVersion(AGGREGATE_ID, AGGREGATE_NAME) == 70
+            assert getAggregateVersion(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME) == 30
+            assert getAggregateVersion(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME) == 50
+            assert getAggregateVersion(ANOTHER_AGGREGATE_ID, ANOTHER_AGGREGATE_NAME) == 80
+
+        cleanup:
+            threadPool.shutdown()
+
+    }
+
+    def "save should throw exception when stream for aggregate does not exist"() {
+
+        when: 'Save event'
+            eventStore.save(AGGREGATE_EVENTS[0], AGGREGATE_NAME)
+
+        then: 'All events exist in database'
+            def ex = thrown(StreamNotExistException)
+            ex.message == "Could not save event because stream does not exist from aggregateId $AGGREGATE_ID and aggregateName $AGGREGATE_NAME"
+
+    }
+
+    def "save with optimistic locking should be able to save events in database"() {
+
+        given: 'Stream for aggregates exist'
+            UUID streamId = createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
+        when: 'Events saved'
+            AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int expectedAggregateVersion ->
+                eventStore.save(event, AGGREGATE_NAME, expectedAggregateVersion)
+            }
+
+        then: 'All events exist in database'
+            def rows = dbClient.rows("select * from event where stream_id = '${streamId}' order by aggregate_version asc")
+
+        and: 'Table rows for events as expected'
+            AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
+                assert databaseUUIDToUUID(rows[idx]['id']) == event.id
+                assert rows[idx]['aggregate_version'] == idx + 1
+                assert databaseUUIDToUUID(rows[idx]['stream_id']) == streamId
+                assert databasePayloadToString(rows[idx]['payload']).replaceAll(" ", "") == eventBodyMapper.eventToString(event).replaceAll(" ", "")
+                assert rows[idx]['order_of_occurrence'] != null
+                assert rows[idx]['event_name'] == "DummyEvent"
+                assert rows[idx]['event_version'] == 1
+            }
+
+    }
+
+    def "save with optimistic locking in parallel with same expectedAggregateVersion should success only for first attempt "() {
+
+        given: 'Stream for aggregates exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Aggregate version is 2'
+            eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME)
+            eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME)
+
+        and: 'Optimistic lock exception counter value is 0'
+            AtomicInteger optimisticLockingExceptionCounter = new AtomicInteger()
+
+        when: 'Saving events with optimistic locking in parallel'
+            def threadPool = Executors.newFixedThreadPool(10)
+            (0..9).collect {
+                threadPool.submit {
+                    try {
+                        eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME, 2)
+                    } catch (OptimisticLockingException ex) {
+                        optimisticLockingExceptionCounter.incrementAndGet()
+                    }
+                }
+            }.each { it.get() }
+
+        then: 'Actual versions of aggregates as expected'
+            assert getAggregateVersion(AGGREGATE_ID, AGGREGATE_NAME) == 3
+
+        and: 'Number of attempts that ends with optimistic lock exception as expected'
+            optimisticLockingExceptionCounter.get() == 9
+
+        cleanup:
+            threadPool.shutdown()
+
+    }
+
+    def "save with optimistic locking in parallel for multiple aggregate should set valid aggregates versions"() {
+
+        given: 'Stream for aggregates exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, ANOTHER_AGGREGATE_NAME)
+
+        when: 'Saving events with optimistic locking in parallel for multiple aggregates'
+            def threadPool = Executors.newFixedThreadPool(10)
+            [
+                    runAsync {
+                        (0..70).each { expectedAggregateVersion ->
+                            eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME, expectedAggregateVersion)
+                        }
+                    },
+                    runAsync {
+                        (0..30).each { expectedAggregateVersion ->
+                            eventStore.save(new DummyEvent(AGGREGATE_ID), ANOTHER_AGGREGATE_NAME, expectedAggregateVersion)
+                        }
+                    },
+                    runAsync {
+                        (0..50).each { expectedAggregateVersion ->
+                            eventStore.save(new DummyEvent(ANOTHER_AGGREGATE_ID), AGGREGATE_NAME, expectedAggregateVersion)
+                        }
+                    },
+                    runAsync {
+                        (0..80).each { expectedAggregateVersion ->
+                            eventStore.save(new DummyEvent(ANOTHER_AGGREGATE_ID), ANOTHER_AGGREGATE_NAME, expectedAggregateVersion)
+                        }
+                    }
+            ].each { it.get() }
+
+        then: 'Actual versions of aggregates as expected'
+            assert getAggregateVersion(AGGREGATE_ID, AGGREGATE_NAME) == 71
+            assert getAggregateVersion(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME) == 31
+            assert getAggregateVersion(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME) == 51
+            assert getAggregateVersion(ANOTHER_AGGREGATE_ID, ANOTHER_AGGREGATE_NAME) == 81
+
+        cleanup:
+            threadPool.shutdown()
+
+    }
+
+    def "save with optimistic locking should throw exception when expected version is lower than actual"() {
+
+        given: 'Stream for aggregates exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Aggregate is in version 2'
+            eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME)
+            eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME)
+
+        when: 'Save with expected version 1'
+            eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME, 1)
+
+        then: 'Exception thrown'
+            def ex = thrown(OptimisticLockingException)
+            ex.message == "Could not save event to database with aggregateId $AGGREGATE_ID, aggregateName $AGGREGATE_NAME and expectedVersion 1"
+
+    }
+
+    def "save with optimistic locking should throw exception when expected version is higher than actual"() {
+
+        given: 'Stream for aggregates exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Aggregate is in version 2'
+            eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME)
+            eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME)
+
+        when: 'Save with expected version 3'
+            eventStore.save(new DummyEvent(AGGREGATE_ID), AGGREGATE_NAME, 3)
+
+        then: 'Exception thrown'
+            def ex = thrown(OptimisticLockingException)
+            ex.message == "Could not save event to database with aggregateId $AGGREGATE_ID, aggregateName $AGGREGATE_NAME and expectedVersion 3"
+
+    }
+
+    def "save with optimistic locking should throw exception when stream for aggregate does not exist"() {
+
+        when: 'Save event'
+            eventStore.save(AGGREGATE_EVENTS[0], AGGREGATE_NAME, 0)
+
+        then: 'Exception thrown'
+            def ex = thrown(StreamNotExistException)
+            ex.message == "Could not save event because stream does not exist from aggregateId $AGGREGATE_ID and aggregateName $AGGREGATE_NAME"
+
+    }
+
+    def "ensureStreamExist should create stream when it not exist"() {
+
+        when: 'Ensure stream exist for aggregate'
+            eventStore.ensureStreamExist(AGGREGATE_ID, AGGREGATE_NAME)
+
+        then: 'Stream created'
+            assert streamExist(AGGREGATE_ID, AGGREGATE_NAME)
+
+    }
+
+    def "ensureStreamExist should not throw exception when stream already exist"() {
+
+        given: 'Stream exist for aggregate'
+            eventStore.ensureStreamExist(AGGREGATE_ID, AGGREGATE_NAME)
+
+        when: 'Ensure stream exist for same aggregate'
+            eventStore.ensureStreamExist(AGGREGATE_ID, AGGREGATE_NAME)
+
+        then: 'Exception not thrown'
+            noExceptionThrown()
+
+        and: 'Stream exist for aggregate'
+            assert streamExist(AGGREGATE_ID, AGGREGATE_NAME)
+
+    }
+
     def "findAll by aggregate name should return all events for aggregate name in the stream in correct order"() {
 
         given: 'Stream for aggregates exist'
-            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
-            createAggregateInStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
 
         and: 'Events for two different aggregates exist in database in single streams'
             def ALL_EVENTS = AGGREGATE_EVENTS + ANOTHER_AGGREGATE_EVENTS
@@ -68,8 +326,8 @@ abstract class EventStoreIT extends Specification {
     def "findAll by aggregate name should not return events when events has different aggregate name"() {
 
         given: 'Stream for aggregates exist'
-            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
-            createAggregateInStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
 
         and: 'Events for two different aggregates exist in database in single streams'
             def ALL_EVENTS = AGGREGATE_EVENTS + ANOTHER_AGGREGATE_EVENTS
@@ -86,7 +344,7 @@ abstract class EventStoreIT extends Specification {
     def "findAll by aggregateId and aggregateName should return events related to aggregate in correct order"() {
 
         given: 'Stream for aggregate exist'
-            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
 
         and: 'Events exist in database'
             insertEventsToDatabase(AGGREGATE_EVENTS, AGGREGATE_NAME)
@@ -107,9 +365,9 @@ abstract class EventStoreIT extends Specification {
     def "findAll by aggregateId and aggregateName should return only events related to aggregate and stream"() {
 
         given: 'Streams for aggregates exist'
-            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
-            createAggregateInStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME, STREAM_ID)
-            createAggregateInStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
 
         and: 'Events exist in database for aggregate id and aggregate name'
             insertEventsToDatabase([AGGREGATE_EVENTS[0]], AGGREGATE_NAME)
@@ -131,7 +389,7 @@ abstract class EventStoreIT extends Specification {
     def "findAllToEvent should return given event and all other events that occurred before"() {
 
         given: 'Stream for aggregate exist'
-            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
 
         and: 'Events exist in database'
             insertEventsToDatabase(AGGREGATE_EVENTS, AGGREGATE_NAME)
@@ -150,8 +408,8 @@ abstract class EventStoreIT extends Specification {
     def "findAllToEvent should return only those events which belong to given aggregate name"() {
 
         given: 'Streams for aggregates exist'
-            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
-            createAggregateInStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME, STREAM_ID)
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME)
 
         and: 'Events exist in database in two different streams'
             insertEventsToDatabase([AGGREGATE_EVENTS[0]], AGGREGATE_NAME)
@@ -186,7 +444,7 @@ abstract class EventStoreIT extends Specification {
     def "findAllToEvent should not return events when those belong to different aggregate name"() {
 
         given: 'Streams for aggregates exist'
-            createAggregateInStream(AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID)
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
 
         and: 'Events exist in database'
             insertEventsToDatabase(AGGREGATE_EVENTS, AGGREGATE_NAME)
@@ -206,10 +464,9 @@ abstract class EventStoreIT extends Specification {
 
     abstract String databasePayloadToString(Object databasePayload)
 
-    abstract void createAggregateInStream(
+    abstract UUID createStream(
             UUID aggregateId,
-            String aggregateName,
-            UUID streamId
+            String aggregateName
     )
 
     abstract void insertEventsToDatabase(
@@ -218,6 +475,16 @@ abstract class EventStoreIT extends Specification {
     )
 
     abstract EventStore<DummyBaseEvent> getEventStore()
+
+    abstract int getAggregateVersion(
+            UUID aggregateId,
+            String aggregateName
+    )
+
+    abstract boolean streamExist(
+            UUID aggregateId,
+            String aggregateName
+    )
 
     static AGGREGATE_ID = UUID.randomUUID()
     static AGGREGATE_EVENTS = [

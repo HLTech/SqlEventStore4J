@@ -22,25 +22,44 @@ class PostgresEventStoreIT extends EventStoreIT implements PostgreSQLContainerTe
         databasePayload.toString()
     }
 
-    void createAggregateInStream(
+    UUID createStream(
             UUID aggregateId,
-            String aggregateName,
-            UUID streamId
+            String aggregateName
     ){
-        dbClient.execute("INSERT INTO AGGREGATE_IN_STREAM VALUES (?::UUID, ?, ?::UUID)", [aggregateId, aggregateName, streamId])
+        UUID streamId = UUID.randomUUID()
+        dbClient.execute("INSERT INTO AGGREGATE_IN_STREAM VALUES (?::UUID, ?, 0, ?::UUID)", [aggregateId, aggregateName, streamId])
+        return streamId
     }
 
     void insertEventsToDatabase(
             List<DummyBaseEvent> events,
             String aggregateName
     ) {
-        events.each { DummyBaseEvent event ->
+        events.eachWithIndex { DummyBaseEvent event, int idx ->
             String payload = eventBodyMapper.eventToString(event)
             dbClient.execute(
-                    "INSERT INTO EVENT (ID, AGGREGATE_ID, AGGREGATE_NAME, STREAM_ID, PAYLOAD, EVENT_NAME, EVENT_VERSION) VALUES (?::UUID, ?::UUID, ?, ?::UUID, ?::JSONB, ?, ?)",
-                    [event.id, event.aggregateId, aggregateName, STREAM_ID, payload, "DummyEvent", 1]
+                    "INSERT INTO EVENT (ID, AGGREGATE_VERSION, STREAM_ID, PAYLOAD, EVENT_NAME, EVENT_VERSION) SELECT ?, ?, stream_id, ?::JSONB, ?, ? from aggregate_in_stream where aggregate_id = ? AND aggregate_name = ?",
+                    [event.id, idx, payload, "DummyEvent", 1, event.aggregateId, aggregateName]
+            )
+            dbClient.execute(
+                    "UPDATE aggregate_in_stream SET aggregate_version = aggregate_version + 1 where aggregate_id = ? AND aggregate_name = ?",
+                    [event.aggregateId, aggregateName]
             )
         }
+    }
+
+    int getAggregateVersion(
+            UUID aggregateId,
+            String aggregateName
+    ) {
+        (int) dbClient.firstRow("select aggregate_version from aggregate_in_stream where aggregate_id = $aggregateId and aggregate_name = $aggregateName")['aggregate_version']
+    }
+
+    boolean streamExist(
+            UUID aggregateId,
+            String aggregateName
+    ) {
+        ((int) dbClient.firstRow("select count(1) from aggregate_in_stream where aggregate_id = $aggregateId and aggregate_name = $aggregateName")[0]) == 1
     }
 
     def cleanup() {
