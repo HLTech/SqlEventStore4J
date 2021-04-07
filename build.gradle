@@ -23,6 +23,7 @@ plugins {
     id 'pl.allegro.tech.build.axion-release' version "$axionReleasePluginVersion"
     id 'io.github.gradle-nexus.publish-plugin' version "$publishingPluginVersion"
     id 'io.codearte.nexus-staging' version "$nexusStagingPluginVersion"
+    id "me.champeau.jmh" version "0.6.3"
 }
 
 group = 'com.hltech'
@@ -151,5 +152,8 @@ nexusStaging {
     delayBetweenRetriesInMillis = 60000
 }
 
+jmh {
+    threads = 10
+}
 
 
