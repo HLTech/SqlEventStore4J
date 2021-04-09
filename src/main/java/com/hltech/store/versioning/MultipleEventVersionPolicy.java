@@ -8,7 +8,7 @@ import java.util.Map;
  * The application must contain knowledge of all deprecated event versions in order to support them.
  * To avoid that consider using {@link UpcastingEventVersionPolicy}
  *
- * Please note, that using this policy is recommended only if you have one instance of you application running at the same time.
+ * <p>Please note, that using this policy is recommended only if you have one instance of you application running at the same time.
  * Using this policy in multi instance case, leads to the situation, where all instance must be updated
  * to understand latest event version, before any instance produce it. For multi instance case consider using {@link NoEventVersionPolicy}
  */
