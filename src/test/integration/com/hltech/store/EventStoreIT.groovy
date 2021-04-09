@@ -1,5 +1,6 @@
 package com.hltech.store
 
+import com.hltech.store.versioning.DummyEventVersionPolicy
 import spock.lang.Specification
 
 import java.util.concurrent.Executors
@@ -10,7 +11,7 @@ import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
 
 abstract class EventStoreIT extends Specification {
 
-    DummyEventTypeMapper eventTypeMapper = new DummyEventTypeMapper()
+    DummyEventVersionPolicy eventVersionPolicy = new DummyEventVersionPolicy()
     DummyEventBodyMapper eventBodyMapper = new DummyEventBodyMapper()
 
     def "save should be able to save events in database"() {

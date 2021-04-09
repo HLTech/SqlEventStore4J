@@ -11,7 +11,7 @@ class OracleEventStoreIT extends EventStoreIT implements OracleContainerTest {
     EventStore<DummyBaseEvent> eventStore = new OracleEventStore(
             DummyBaseEvent.EVENT_ID_EXTRACTOR,
             DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
-            eventTypeMapper,
+            eventVersionPolicy,
             eventBodyMapper,
             dataSource
     )

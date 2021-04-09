@@ -2,8 +2,8 @@ package testing.prerequisites;
 
 import com.hltech.store.DummyBaseEvent;
 import com.hltech.store.DummyEventBodyMapper;
-import com.hltech.store.DummyEventTypeMapper;
 import com.hltech.store.PostgresEventStore;
+import com.hltech.store.versioning.DummyEventVersionPolicy;
 import groovy.sql.Sql;
 import org.flywaydb.core.Flyway;
 import org.openjdk.jmh.annotations.Level;
@@ -51,7 +51,7 @@ public class PostgresEventStorePerfTestsPreparation {
         this.eventStore = new PostgresEventStore(
                 DummyBaseEvent.EVENT_ID_EXTRACTOR,
                 DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
-                new DummyEventTypeMapper(),
+                new DummyEventVersionPolicy(),
                 new DummyEventBodyMapper(),
                 dataSource
         );

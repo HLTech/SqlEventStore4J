@@ -1,20 +1,12 @@
-package com.hltech.store;
+package com.hltech.store.versioning;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SimpleEventTypeMapper<E> implements EventTypeMapper<E> {
+public class MultipleEventVersionPolicy<E> implements EventVersionPolicy<E> {
 
     private final Map<NameAndVersion, Class<? extends E>> eventNameAndVersionToTypeMap = new HashMap<>();
     private final Map<Class<? extends E>, NameAndVersion> eventTypeToNameAndVersionMap = new HashMap<>();
-
-    public SimpleEventTypeMapper() {
-    }
-
-    public SimpleEventTypeMapper(Collection<TypeNameAndVersion<E>> mappings) {
-        registerMappings(mappings);
-    }
 
     @Override
     public String toName(Class<? extends E> eventType) {
@@ -43,14 +35,12 @@ public class SimpleEventTypeMapper<E> implements EventTypeMapper<E> {
         return eventType;
     }
 
-    @Override
-    public void registerMapping(TypeNameAndVersion<? extends E> mapping) {
-        validateUniqueEventNameAndVersion(mapping);
-        validateUniqueType(mapping);
-
-        eventNameAndVersionToTypeMap.put(mapping.getNameAndVersion(), mapping.getType());
-        eventTypeToNameAndVersionMap.put(mapping.getType(), mapping.getNameAndVersion());
-
+    public void registerMapping(Class<? extends E> eventType, String eventName, int eventVersion) {
+        NameAndVersion nameAndVersion = new NameAndVersion(eventName, eventVersion);
+        validateUniqueEventNameAndVersion(nameAndVersion);
+        validateUniqueType(eventType);
+        eventNameAndVersionToTypeMap.put(nameAndVersion, eventType);
+        eventTypeToNameAndVersionMap.put(eventType, nameAndVersion);
     }
 
     /**
@@ -58,12 +48,12 @@ public class SimpleEventTypeMapper<E> implements EventTypeMapper<E> {
      * eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 1);
      * eventTypeMapper.registerMapping(OrderCancelled.class, "OrderPlaced", 1);
      */
-    private void validateUniqueEventNameAndVersion(TypeNameAndVersion<? extends E> mapping) {
-        if (eventNameAndVersionToTypeMap.containsKey(mapping.getNameAndVersion())) {
-            Class<? extends E> type = eventNameAndVersionToTypeMap.get(mapping.getNameAndVersion());
+    private void validateUniqueEventNameAndVersion(NameAndVersion nameAndVersion) {
+        if (eventNameAndVersionToTypeMap.containsKey(nameAndVersion)) {
+            Class<? extends E> type = eventNameAndVersionToTypeMap.get(nameAndVersion);
             throw new NonUniqueMappingException(
                     String.format("Mapping for event name: %s and version: %s was already configured for type: %s",
-                            mapping.getName(), mapping.getVersion(), type
+                            nameAndVersion.getName(), nameAndVersion.getVersion(), type
                     )
             );
         }
@@ -74,12 +64,12 @@ public class SimpleEventTypeMapper<E> implements EventTypeMapper<E> {
      * eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlaced", 1);
      * eventTypeMapper.registerMapping(OrderPlaced.class, "OrderPlacedNew", 2);
      */
-    private void validateUniqueType(TypeNameAndVersion<? extends E> mapping) {
-        if (eventTypeToNameAndVersionMap.containsKey(mapping.getType())) {
-            NameAndVersion nameAndVersion = eventTypeToNameAndVersionMap.get(mapping.getType());
+    private void validateUniqueType(Class<? extends E> eventType) {
+        if (eventTypeToNameAndVersionMap.containsKey(eventType)) {
+            NameAndVersion nameAndVersion = eventTypeToNameAndVersionMap.get(eventType);
             throw new NonUniqueMappingException(
                     String.format("Mapping for event type: %s was already configured for event name: %s and version: %s",
-                            mapping.getType(), nameAndVersion.getName(), nameAndVersion.getVersion()
+                            eventType, nameAndVersion.getName(), nameAndVersion.getVersion()
                     )
             );
         }

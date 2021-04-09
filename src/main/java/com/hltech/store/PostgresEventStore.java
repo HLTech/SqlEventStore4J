@@ -1,5 +1,6 @@
 package com.hltech.store;
 
+import com.hltech.store.versioning.EventVersionPolicy;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,7 +69,7 @@ public class PostgresEventStore<E> implements EventStore<E> {
 
     private final Function<E, UUID> eventIdExtractor;
     private final Function<E, UUID> aggregateIdExtractor;
-    private final EventTypeMapper<E> eventTypeMapper;
+    private final EventVersionPolicy<E> eventVersionPolicy;
     private final EventBodyMapper<E> eventBodyMapper;
     private final DataSource dataSource;
 
@@ -189,8 +190,8 @@ public class PostgresEventStore<E> implements EventStore<E> {
             pst.setObject(2, aggregateInStream.getAggregateVersion() + 1);
             pst.setObject(3, aggregateInStream.getStreamId());
             pst.setObject(4, eventBodyMapper.eventToString(event));
-            pst.setObject(5, eventTypeMapper.toName((Class<? extends E>) event.getClass()));
-            pst.setObject(6, eventTypeMapper.toVersion((Class<? extends E>) event.getClass()));
+            pst.setObject(5, eventVersionPolicy.toName((Class<? extends E>) event.getClass()));
+            pst.setObject(6, eventVersionPolicy.toVersion((Class<? extends E>) event.getClass()));
             pst.executeUpdate();
         }
     }
@@ -249,7 +250,7 @@ public class PostgresEventStore<E> implements EventStore<E> {
         List<E> result = new ArrayList<>();
 
         while (rs.next()) {
-            Class<? extends E> eventType = eventTypeMapper.toType(
+            Class<? extends E> eventType = eventVersionPolicy.toType(
                     rs.getString("event_name"),
                     rs.getInt("event_version")
             );
