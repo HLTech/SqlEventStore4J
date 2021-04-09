@@ -1,5 +1,6 @@
 package com.hltech.store;
 
+import com.hltech.store.versioning.EventVersioningStrategy;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,8 +73,7 @@ public class OracleEventStore<E> implements EventStore<E> {
 
     private final Function<E, UUID> eventIdExtractor;
     private final Function<E, UUID> aggregateIdExtractor;
-    private final EventTypeMapper<E> eventTypeMapper;
-    private final EventBodyMapper<E> eventBodyMapper;
+    private final EventVersioningStrategy<E> eventVersioningStrategy;
     private final DataSource dataSource;
 
     @Override
@@ -192,9 +192,9 @@ public class OracleEventStore<E> implements EventStore<E> {
             pst.setObject(1, uuidToDatabaseUUID(eventIdExtractor.apply(event)));
             pst.setObject(2, aggregateInStream.getAggregateVersion() + 1);
             pst.setObject(3, uuidToDatabaseUUID(aggregateInStream.getStreamId()));
-            pst.setBlob(4, new ByteArrayInputStream(eventBodyMapper.eventToString(event).getBytes(UTF_8)));
-            pst.setObject(5, eventTypeMapper.toName((Class<? extends E>) event.getClass()));
-            pst.setObject(6, eventTypeMapper.toVersion((Class<? extends E>) event.getClass()));
+            pst.setBlob(4, new ByteArrayInputStream(eventVersioningStrategy.toJson(event).getBytes(UTF_8)));
+            pst.setObject(5, eventVersioningStrategy.toName((Class<? extends E>) event.getClass()));
+            pst.setObject(6, eventVersioningStrategy.toVersion((Class<? extends E>) event.getClass()));
             pst.executeUpdate();
         }
     }
@@ -253,14 +253,13 @@ public class OracleEventStore<E> implements EventStore<E> {
         List<E> result = new ArrayList<>();
 
         while (rs.next()) {
-            Class<? extends E> eventType = eventTypeMapper.toType(
+            Blob blobedPayload = rs.getBlob("payload");
+            byte[] buffedPayload = blobedPayload.getBytes(1, (int) blobedPayload.length());
+            E event = eventVersioningStrategy.toEvent(
+                    new String(buffedPayload, UTF_8),
                     rs.getString("event_name"),
                     rs.getInt("event_version")
             );
-
-            Blob blobedPayload = rs.getBlob("payload");
-            byte[] buffedPayload = blobedPayload.getBytes(1, (int) blobedPayload.length());
-            E event = eventBodyMapper.stringToEvent(new String(buffedPayload, UTF_8), eventType);
             result.add(event);
         }
         return result;

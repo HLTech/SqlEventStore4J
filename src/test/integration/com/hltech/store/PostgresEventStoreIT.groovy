@@ -9,8 +9,7 @@ class PostgresEventStoreIT extends EventStoreIT implements PostgreSQLContainerTe
     EventStore<DummyBaseEvent> eventStore = new PostgresEventStore(
             DummyBaseEvent.EVENT_ID_EXTRACTOR,
             DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
-            eventTypeMapper,
-            eventBodyMapper,
+            eventVersioningStrategy,
             dataSource
     )
 
@@ -36,7 +35,7 @@ class PostgresEventStoreIT extends EventStoreIT implements PostgreSQLContainerTe
             String aggregateName
     ) {
         events.eachWithIndex { DummyBaseEvent event, int idx ->
-            String payload = eventBodyMapper.eventToString(event)
+            String payload = eventVersioningStrategy.toJson(event)
             dbClient.execute(
                     "INSERT INTO EVENT (ID, AGGREGATE_VERSION, STREAM_ID, PAYLOAD, EVENT_NAME, EVENT_VERSION) SELECT ?, ?, stream_id, ?::JSONB, ?, ? from aggregate_in_stream where aggregate_id = ? AND aggregate_name = ?",
                     [event.id, idx, payload, "DummyEvent", 1, event.aggregateId, aggregateName]

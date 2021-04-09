@@ -11,8 +11,7 @@ class OracleEventStoreIT extends EventStoreIT implements OracleContainerTest {
     EventStore<DummyBaseEvent> eventStore = new OracleEventStore(
             DummyBaseEvent.EVENT_ID_EXTRACTOR,
             DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
-            eventTypeMapper,
-            eventBodyMapper,
+            eventVersioningStrategy,
             dataSource
     )
 
@@ -38,7 +37,7 @@ class OracleEventStoreIT extends EventStoreIT implements OracleContainerTest {
             String aggregateName
     ) {
         events.eachWithIndex { DummyBaseEvent event, int idx ->
-            String payload = eventBodyMapper.eventToString(event)
+            String payload = eventVersioningStrategy.toJson(event)
             def blobedPayload = payload.getBytes(StandardCharsets.UTF_8)
             dbClient.execute(
                     "INSERT INTO EVENT (ID, AGGREGATE_VERSION, STREAM_ID, PAYLOAD, EVENT_NAME, EVENT_VERSION) SELECT ?, ?, stream_id, ?, ?, ? from aggregate_in_stream where aggregate_id = ? AND aggregate_name = ?",
