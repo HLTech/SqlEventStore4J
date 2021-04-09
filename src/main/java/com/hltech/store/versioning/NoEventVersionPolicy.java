@@ -3,6 +3,10 @@ package com.hltech.store.versioning;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * In this policy, every event exists only in latest version, so that the application code has to support only one version of the event.
+ * It is also recommended when you have multiple instance of you application running at the same time, because it supports backward and forward compatibility.
+ */
 public class NoEventVersionPolicy<E> implements EventVersionPolicy<E> {
 
     private static final int CONSTANT_VERSION_NUMBER = 1;

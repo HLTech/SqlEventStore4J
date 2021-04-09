@@ -3,6 +3,15 @@ package com.hltech.store.versioning;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * In this policy, multiple versions of the event has to bo supported in the application code.
+ * The application must contain knowledge of all deprecated event versions in order to support them.
+ * To avoid that consider using {@link UpcastingEventVersionPolicy}
+ *
+ * Please note, that using this policy is recommended only if you have one instance of you application running at the same time.
+ * Using this policy in multi instance case, leads to the situation, where all instance must be updated
+ * to understand latest event version, before any instance produce it. For multi instance case consider using {@link NoEventVersionPolicy}
+ */
 public class MultipleEventVersionPolicy<E> implements EventVersionPolicy<E> {
 
     private final Map<NameAndVersion, Class<? extends E>> eventNameAndVersionToTypeMap = new HashMap<>();
