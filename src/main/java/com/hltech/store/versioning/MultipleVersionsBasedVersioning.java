@@ -4,13 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * In this strategy, multiple versions of the event has to bo supported in the application code.
+ * In this strategy multiple versions of the event have to be supported in the application code.
  * The application must contain knowledge of all deprecated event versions in order to support them.
- * To avoid that consider using {@link UpcastingBasedVersioning}
+ * To avoid that consider using {@link UpcastingBasedVersioning}.
  *
- * <p>Please note, that using this strategy is recommended only if you have one instance of you application running at the same time.
- * Using this strategy in multi instance case, leads to the situation, where all instance must be updated
- * to understand latest event version, before any instance produce it. For multi instance case consider using {@link MappingBasedVersioning}
+ * <p>Please note that using this strategy is recommended only if you have one instance of your application running at the same time.
+ * Using this strategy in multi instance case leads to the situation where all instances must be updated
+ * to understand latest event version before any instance produces it. For multi instance case consider using {@link MappingBasedVersioning}
  */
 public class MultipleVersionsBasedVersioning<E> implements EventVersioningStrategy<E> {
 
