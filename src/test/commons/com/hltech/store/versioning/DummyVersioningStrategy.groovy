@@ -1,6 +1,9 @@
-package com.hltech.store
+package com.hltech.store.versioning
 
-class DummyEventTypeMapper implements EventTypeMapper<DummyBaseEvent> {
+import com.hltech.store.DummyBaseEvent
+import com.hltech.store.DummyEvent
+
+class DummyVersioningStrategy implements EventVersioningStrategy<DummyBaseEvent> {
 
     @Override
     String toName(Class<? extends DummyBaseEvent> eventType) {
@@ -15,11 +18,6 @@ class DummyEventTypeMapper implements EventTypeMapper<DummyBaseEvent> {
     @Override
     Class<? extends DummyBaseEvent> toType(String eventName, int eventVersion) {
         DummyEvent.class
-    }
-
-    @Override
-    void registerMapping(TypeNameAndVersion<? extends DummyBaseEvent> mapping) {
-
     }
 
 }

@@ -9,7 +9,7 @@ class PostgresEventStoreIT extends EventStoreIT implements PostgreSQLContainerTe
     EventStore<DummyBaseEvent> eventStore = new PostgresEventStore(
             DummyBaseEvent.EVENT_ID_EXTRACTOR,
             DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
-            eventTypeMapper,
+            eventVersioningStrategy,
             eventBodyMapper,
             dataSource
     )
