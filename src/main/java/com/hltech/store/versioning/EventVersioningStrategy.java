@@ -2,7 +2,7 @@ package com.hltech.store.versioning;
 
 import java.util.Objects;
 
-public interface EventVersionPolicy<E> {
+public interface EventVersioningStrategy<E> {
 
     String toName(Class<? extends E> eventType);
 

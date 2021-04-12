@@ -1,8 +1,8 @@
 package com.hltech.store
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.hltech.store.versioning.EventVersionPolicy
-import com.hltech.store.versioning.MultipleEventVersionPolicy
+import com.hltech.store.versioning.EventVersioningStrategy
+import com.hltech.store.versioning.MultipleVersionsBasedVersioning
 import spock.lang.Specification
 import spock.lang.Subject
 
@@ -10,12 +10,12 @@ import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
 
 class AggregateRepositoryFT extends Specification implements PostgreSQLContainerTest {
 
-    EventVersionPolicy<DummyBaseEvent> eventVersionPolicy = new MultipleEventVersionPolicy<>()
+    EventVersioningStrategy<DummyBaseEvent> eventVersioningStrategy = new MultipleVersionsBasedVersioning<>()
     EventBodyMapper<DummyBaseEvent> eventBodyMapper = new JacksonEventBodyMapper<>(new ObjectMapper())
     EventStore<DummyBaseEvent> eventStore = new PostgresEventStore(
             DummyBaseEvent.EVENT_ID_EXTRACTOR,
             DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
-            eventVersionPolicy,
+            eventVersioningStrategy,
             eventBodyMapper,
             dataSource
     )
@@ -32,8 +32,8 @@ class AggregateRepositoryFT extends Specification implements PostgreSQLContainer
     def "find should return aggregate with events and version applied"() {
 
         given: 'Events types mapping registered'
-            eventVersionPolicy.registerMapping(DummyEvent, "DummyEvent", 1)
-            eventVersionPolicy.registerMapping(AnotherDummyEvent, "AnotherDummyEvent", 1)
+            eventVersioningStrategy.registerMapping(DummyEvent, "DummyEvent", 1)
+            eventVersioningStrategy.registerMapping(AnotherDummyEvent, "AnotherDummyEvent", 1)
 
         and: 'Events saved in repository'
             UUID aggregateId = UUID.randomUUID()

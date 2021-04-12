@@ -4,10 +4,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * In this policy, every event exists only in latest version, so that the application code has to support only one version of the event.
- * It is also recommended when you have multiple instance of you application running at the same time, because it supports backward and forward compatibility.
+ * In this strategy, every event exists only in latest version, so that the application code has to support only one version of the event.
+ * The mapping strategy is based on three simple principles:
+ * - When attribute exists on both json and class then set the value from json
+ * - When attribute exists on json but not on class then do nothing
+ * - When attribute exists on class but not in json then set default value
+ *
+ * <p>This strategy is recommended when you have multiple instance of you application running at the same time,
+ * because it supports backward and forward compatibility.
+ *
+ * <p>Be aware, that it also has one important and annoying drawback. You are no longer allowed to rename and event attribute.
+ * What you can do, when attribute name is no longer valid, is:
+ * - add new attribute with valid name and support both attributes
+ * - use copy & replace mechanism to fix no longer valid attribute name
+ * - use {@link WrappingBasedVersioning} instead
  */
-public class NoEventVersionPolicy<E> implements EventVersionPolicy<E> {
+public class MappingBasedVersioning<E> implements EventVersioningStrategy<E> {
 
     private static final int CONSTANT_VERSION_NUMBER = 1;
 

@@ -3,7 +3,7 @@ package com.hltech.store.versioning
 import com.hltech.store.DummyBaseEvent
 import com.hltech.store.DummyEvent
 
-class DummyEventVersionPolicy implements EventVersionPolicy<DummyBaseEvent> {
+class DummyVersioningStrategy implements EventVersioningStrategy<DummyBaseEvent> {
 
     @Override
     String toName(Class<? extends DummyBaseEvent> eventType) {
