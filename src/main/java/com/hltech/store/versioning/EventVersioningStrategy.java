@@ -63,20 +63,4 @@ public interface EventVersioningStrategy<E> {
 
     }
 
-    class EventTypeMappingException extends RuntimeException {
-
-        EventTypeMappingException(String message) {
-            super(message);
-        }
-
-    }
-
-    class NonUniqueMappingException extends RuntimeException {
-
-        NonUniqueMappingException(String message) {
-            super(message);
-        }
-
-    }
-
 }

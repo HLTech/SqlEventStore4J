@@ -1,6 +1,5 @@
 package com.hltech.store.versioning;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
@@ -35,8 +34,8 @@ public class MappingBasedVersioning<E> implements EventVersioningStrategy<E> {
         Class<? extends E> eventType = toType(eventName);
         try {
             return objectMapper.readValue(eventJson, eventType);
-        } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Could not read event json", ex);
+        } catch (Exception ex) {
+            throw new EventBodyMappingException(eventJson, eventType, ex);
         }
     }
 
@@ -58,8 +57,8 @@ public class MappingBasedVersioning<E> implements EventVersioningStrategy<E> {
     public String toJson(E event) {
         try {
             return objectMapper.writeValueAsString(event);
-        } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Could not write event json", ex);
+        } catch (Exception ex) {
+            throw new EventBodyMappingException(event, ex);
         }
     }
 

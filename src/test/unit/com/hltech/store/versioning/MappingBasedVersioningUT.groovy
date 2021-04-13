@@ -3,6 +3,7 @@ package com.hltech.store.versioning
 import com.hltech.store.AnotherDummyEvent
 import com.hltech.store.DummyBaseEvent
 import com.hltech.store.DummyEvent
+import com.hltech.store.InvalidDummyEvent
 import spock.lang.Specification
 import spock.lang.Subject
 
@@ -43,7 +44,7 @@ class MappingBasedVersioningUT extends Specification {
             eventVersioningStrategy.toEvent(eventJson, eventName, constantVersionNumber)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event type not found for event name: $eventName"
 
     }
@@ -57,8 +58,22 @@ class MappingBasedVersioningUT extends Specification {
             eventVersioningStrategy.toEvent(anotherEventJson, anotherEventName, constantVersionNumber)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event type not found for event name: $anotherEventName"
+
+    }
+
+    def "toEvent should throw exception when json is invalid"() {
+
+        given: 'EventType registered for eventName'
+            eventVersioningStrategy.registerMapping(eventType, eventName)
+
+        when: 'Try to get event by another eventName'
+            eventVersioningStrategy.toEvent(invalidJson, eventName, constantVersionNumber)
+
+        then: 'expected exception thrown'
+            def ex = thrown(EventBodyMappingException)
+            ex.message == "Could not create event of type $eventType from json $invalidJson"
 
     }
 
@@ -94,7 +109,7 @@ class MappingBasedVersioningUT extends Specification {
             eventVersioningStrategy.toName(eventType)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event name not found for event type: $eventType"
 
     }
@@ -108,7 +123,7 @@ class MappingBasedVersioningUT extends Specification {
             eventVersioningStrategy.toName(anotherEventType)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event name not found for event type: $anotherEventType"
 
     }
@@ -129,7 +144,7 @@ class MappingBasedVersioningUT extends Specification {
             eventVersioningStrategy.registerMapping(anotherEventType, eventName)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.NonUniqueMappingException)
+            def ex = thrown(NonUniqueMappingException)
             ex.message == "Mapping for event name: $eventName was already configured for type: $eventType"
 
     }
@@ -143,7 +158,7 @@ class MappingBasedVersioningUT extends Specification {
             eventVersioningStrategy.registerMapping(eventType, anotherEventName)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.NonUniqueMappingException)
+            def ex = thrown(NonUniqueMappingException)
             ex.message == "Mapping for event type: $eventType was already configured for event name: $eventName"
 
     }
@@ -152,6 +167,17 @@ class MappingBasedVersioningUT extends Specification {
 
         expect: 'toJson return valid json for event'
             eventJson == eventVersioningStrategy.toJson(event)
+
+    }
+
+    def "toJson should throw exception when json could not be created from event"() {
+
+        when: 'toJson return valid json for event'
+            eventVersioningStrategy.toJson(new InvalidDummyEvent())
+
+        then: 'Exception thrown'
+            def ex = thrown(EventBodyMappingException)
+            ex.message.contains("Could not create json from event com.hltech.store.InvalidDummyEvent")
 
     }
 
@@ -166,5 +192,6 @@ class MappingBasedVersioningUT extends Specification {
     static anotherEventJson = """{"id":"$anotherEvent.id","aggregateId":"$anotherEvent.aggregateId"}""".toString()
 
     static constantVersionNumber = 1
+    static invalidJson = "{id}"
 
 }

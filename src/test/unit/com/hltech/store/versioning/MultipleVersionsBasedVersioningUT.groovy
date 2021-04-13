@@ -3,6 +3,7 @@ package com.hltech.store.versioning
 import com.hltech.store.AnotherDummyEvent
 import com.hltech.store.DummyBaseEvent
 import com.hltech.store.DummyEvent
+import com.hltech.store.InvalidDummyEvent
 import spock.lang.Specification
 import spock.lang.Subject
 
@@ -75,7 +76,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
             eventVersioningStrategy.toEvent(eventJson, eventName, eventVersion)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event type not found for event name: $eventName and event version: $eventVersion"
 
     }
@@ -89,7 +90,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
             eventVersioningStrategy.toEvent(eventJson, anotherEventName, eventVersion)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event type not found for event name: $anotherEventName and event version: $eventVersion"
 
     }
@@ -103,7 +104,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
             eventVersioningStrategy.toEvent(eventJson, eventName, anotherEventVersion)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event type not found for event name: $eventName and event version: $anotherEventVersion"
 
     }
@@ -156,7 +157,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
             eventVersioningStrategy.toName(eventType)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event name not found for event type: $eventType"
 
     }
@@ -170,7 +171,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
             eventVersioningStrategy.toName(anotherEventType)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event name not found for event type: $anotherEventType"
 
     }
@@ -223,7 +224,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
             eventVersioningStrategy.toVersion(eventType)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event version not found for event type: $eventType"
 
     }
@@ -237,7 +238,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
             eventVersioningStrategy.toVersion(anotherEventType)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.EventTypeMappingException)
+            def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event version not found for event type: $anotherEventType"
 
     }
@@ -251,7 +252,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
             eventVersioningStrategy.registerMapping(anotherEventType, eventName, eventVersion)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.NonUniqueMappingException)
+            def ex = thrown(NonUniqueMappingException)
             ex.message == "Mapping for event name: $eventName and version: $eventVersion was already configured for type: $eventType"
 
     }
@@ -265,7 +266,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
             eventVersioningStrategy.registerMapping(eventType, anotherEventName, anotherEventVersion)
 
         then: 'expected exception thrown'
-            def ex = thrown(EventVersioningStrategy.NonUniqueMappingException)
+            def ex = thrown(NonUniqueMappingException)
             ex.message == "Mapping for event type: $eventType was already configured for event name: $eventName and version: $eventVersion"
 
     }
@@ -274,6 +275,17 @@ class MultipleVersionsBasedVersioningUT extends Specification {
 
         expect: 'toJson return valid json for event'
             eventJson == eventVersioningStrategy.toJson(event)
+
+    }
+
+    def "toJson should throw exception when json could not be created from event"() {
+
+        when: 'toJson return valid json for event'
+            eventVersioningStrategy.toJson(new InvalidDummyEvent())
+
+        then: 'Exception thrown'
+            def ex = thrown(EventBodyMappingException)
+            ex.message.contains("Could not create json from event com.hltech.store.InvalidDummyEvent")
 
     }
 
