@@ -1,9 +1,13 @@
 package com.hltech.store.versioning;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES;
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 /**
  * In this strategy every event exists only in latest version so that the application code has to support only one version of the event.
@@ -27,7 +31,15 @@ public class MappingBasedVersioning<E> implements EventVersioningStrategy<E> {
 
     private final Map<String, Class<? extends E>> eventNameToTypeMap = new HashMap<>();
     private final Map<Class<? extends E>, String> eventTypeToNameMap = new HashMap<>();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Getter
+    private final ObjectMapper objectMapper;
+
+    public MappingBasedVersioning() {
+        objectMapper = new ObjectMapper();
+        objectMapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.configure(FAIL_ON_MISSING_CREATOR_PROPERTIES, false);
+    }
 
     @Override
     public E toEvent(String eventJson, String eventName, int eventVersion) {

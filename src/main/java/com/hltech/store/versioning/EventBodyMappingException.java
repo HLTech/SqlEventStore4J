@@ -5,7 +5,7 @@ import com.hltech.store.EventStoreException;
 public class EventBodyMappingException extends EventStoreException {
 
     EventBodyMappingException(String eventJson, Class eventType, Throwable cause) {
-        super(String.format("Could not create event of type %s from json %s", eventType, eventJson), cause);
+        super(String.format("Could not create event of type %s from json %s", eventType.getTypeName(), eventJson), cause);
     }
 
     EventBodyMappingException(Object event, Throwable cause) {

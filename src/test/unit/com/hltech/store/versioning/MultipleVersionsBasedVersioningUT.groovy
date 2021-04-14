@@ -70,6 +70,34 @@ class MultipleVersionsBasedVersioningUT extends Specification {
 
     }
 
+    def "toEvent should throw exception when there is additional attribute in json"() {
+
+        given: 'EventType registered for eventName'
+            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+
+        when: 'Try to get event from json with additional attribute'
+            eventVersioningStrategy.toEvent(eventJsonWithAdditionalAttribute, eventName, eventVersion)
+
+        then: 'expected exception thrown'
+            def ex = thrown(EventBodyMappingException)
+            ex.message == "Could not create event of type com.hltech.store.DummyEvent from json $eventJsonWithAdditionalAttribute"
+
+    }
+
+    def "toEvent should throw exception when one of attribute is not present in json"() {
+
+        given: 'EventType registered for eventName'
+            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+
+        when: 'Try to get event from json without one of attribute'
+            eventVersioningStrategy.toEvent(eventJsonWithoutOneOfAttribute, eventName, eventVersion)
+
+        then: 'expected exception thrown'
+            def ex = thrown(EventBodyMappingException)
+            ex.message == "Could not create event of type com.hltech.store.DummyEvent from json $eventJsonWithoutOneOfAttribute"
+
+    }
+
     def "toEvent should throw exception when mapping has not been previously registered"() {
 
         when: 'Try to get event for unregistered eventType'
@@ -293,12 +321,14 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     static eventType = DummyEvent.class
     static eventName = "DummyEvent"
     static eventVersion = 1
-    static eventJson = """{"id":"$event.id","aggregateId":"$event.aggregateId"}""".toString()
+    static eventJson = """{"id":"$event.id","aggregateId":"$event.aggregateId"}"""
+    static eventJsonWithAdditionalAttribute = """{"id":"$event.id","aggregateId":"$event.aggregateId", "additionalAtribute": "value"}"""
+    static eventJsonWithoutOneOfAttribute = """{"id":"$event.id"}"""
 
     static anotherEvent = new AnotherDummyEvent()
     static anotherEventType = AnotherDummyEvent.class
     static anotherEventName = "AnotherDummyEvent"
     static anotherEventVersion = 2
-    static anotherEventJson = """{"id":"$anotherEvent.id","aggregateId":"$anotherEvent.aggregateId"}""".toString()
+    static anotherEventJson = """{"id":"$anotherEvent.id","aggregateId":"$anotherEvent.aggregateId"}"""
 
 }
