@@ -7,7 +7,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 import static java.util.concurrent.CompletableFuture.runAsync
-import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
+import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric
 
 abstract class EventStoreIT extends Specification {
 

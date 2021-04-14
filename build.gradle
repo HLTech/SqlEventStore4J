@@ -9,6 +9,7 @@ buildscript {
         nexusPublishPluginVersion = '0.2.0'
         axionReleasePluginVersion = '1.12.1'
         publishingPluginVersion = '1.0.0'
+        jacksonVersion = '2.12.1'
     }
 }
 
@@ -45,12 +46,9 @@ sourceCompatibility = 11
 targetCompatibility = 11
 
 dependencies {
-    implementation 'org.slf4j:slf4j-api:1.7.25'
-    implementation 'org.slf4j:slf4j-simple:1.7.25'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.1'
-
-    implementation "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:$nexusStagingPluginVersion"
-    implementation "pl.allegro.tech.build:axion-release-plugin:$axionReleasePluginVersion"
+    compileOnly "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    compileOnly "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:$nexusStagingPluginVersion"
+    compileOnly "pl.allegro.tech.build:axion-release-plugin:$axionReleasePluginVersion"
 
     /* LOMBOK - generate additional bytecode during compilation*/
     compileOnly "org.projectlombok:lombok:1.18.16"

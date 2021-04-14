@@ -6,7 +6,8 @@ import com.hltech.store.versioning.MultipleVersionsBasedVersioning
 import spock.lang.Specification
 import spock.lang.Subject
 
-import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
+import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric
+
 
 class AggregateRepositoryFT extends Specification implements PostgreSQLContainerTest {
 
