@@ -183,6 +183,11 @@ public class OracleEventStore<E> implements EventStore<E> {
         }
     }
 
+    @Override
+    public EventVersioningStrategy<E> getEventVersioningStrategy() {
+        return eventVersioningStrategy;
+    }
+
     private void saveEvent(
             Connection connection,
             E event,

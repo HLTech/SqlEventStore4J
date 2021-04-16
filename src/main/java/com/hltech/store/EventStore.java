@@ -1,5 +1,7 @@
 package com.hltech.store;
 
+import com.hltech.store.versioning.EventVersioningStrategy;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,5 +24,7 @@ public interface EventStore<E> {
     List<E> findAll(UUID aggregateId, String aggregateName);
 
     List<E> findAllToEvent(E toEvent, String aggregateName);
+
+    EventVersioningStrategy<E> getEventVersioningStrategy();
 
 }
