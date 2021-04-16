@@ -2,8 +2,11 @@ package com.hltech.store.versioning
 
 import com.hltech.store.DummyBaseEvent
 import com.hltech.store.DummyEvent
+import groovy.json.JsonSlurper
 
 class DummyVersioningStrategy implements EventVersioningStrategy<DummyBaseEvent> {
+
+    static SLURPER = new JsonSlurper()
 
     @Override
     String toName(Class<? extends DummyBaseEvent> eventType) {
@@ -16,8 +19,17 @@ class DummyVersioningStrategy implements EventVersioningStrategy<DummyBaseEvent>
     }
 
     @Override
-    Class<? extends DummyBaseEvent> toType(String eventName, int eventVersion) {
-        DummyEvent.class
+    String toJson(DummyBaseEvent event) {
+        """{ "id": "$event.id", "aggregateId": "$event.aggregateId" }"""
+    }
+
+    @Override
+    DummyBaseEvent toEvent(String eventString, String eventName, int eventVersion) {
+        def parsedJson = SLURPER.parseText(eventString)
+        new DummyEvent(
+                UUID.fromString(parsedJson['id'].toString()),
+                UUID.fromString(parsedJson['aggregateId'].toString())
+        )
     }
 
 }

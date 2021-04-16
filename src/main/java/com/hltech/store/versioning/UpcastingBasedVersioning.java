@@ -11,6 +11,11 @@ package com.hltech.store.versioning;
 public class UpcastingBasedVersioning<E> implements EventVersioningStrategy<E> {
 
     @Override
+    public E toEvent(String eventJson, String eventName, int eventVersion) {
+        throw new IllegalStateException("Not yet implemented");
+    }
+
+    @Override
     public String toName(Class<? extends E> eventType) {
         throw new IllegalStateException("Not yet implemented");
     }
@@ -21,7 +26,7 @@ public class UpcastingBasedVersioning<E> implements EventVersioningStrategy<E> {
     }
 
     @Override
-    public Class<? extends E> toType(String eventName, int eventVersion) {
+    public String toJson(E event) {
         throw new IllegalStateException("Not yet implemented");
     }
 

@@ -4,11 +4,13 @@ import java.util.Objects;
 
 public interface EventVersioningStrategy<E> {
 
+    E toEvent(String eventJson, String eventName, int eventVersion);
+
     String toName(Class<? extends E> eventType);
 
     int toVersion(Class<? extends E> eventType);
 
-    Class<? extends E> toType(String eventName, int eventVersion);
+    String toJson(E event);
 
     class NameAndVersion {
 
@@ -57,22 +59,6 @@ public interface EventVersioningStrategy<E> {
             result = result * prime + ($name == null ? 43 : $name.hashCode());
             result = result * prime + this.version;
             return result;
-        }
-
-    }
-
-    class EventTypeMappingException extends RuntimeException {
-
-        EventTypeMappingException(String message) {
-            super(message);
-        }
-
-    }
-
-    class NonUniqueMappingException extends RuntimeException {
-
-        NonUniqueMappingException(String message) {
-            super(message);
         }
 
     }

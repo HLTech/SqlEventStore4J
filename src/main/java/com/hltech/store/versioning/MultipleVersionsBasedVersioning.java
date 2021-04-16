@@ -1,7 +1,13 @@
 package com.hltech.store.versioning;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES;
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 /**
  * In this strategy multiple versions of the event have to be supported in the application code.
@@ -16,6 +22,25 @@ public class MultipleVersionsBasedVersioning<E> implements EventVersioningStrate
 
     private final Map<NameAndVersion, Class<? extends E>> eventNameAndVersionToTypeMap = new HashMap<>();
     private final Map<Class<? extends E>, NameAndVersion> eventTypeToNameAndVersionMap = new HashMap<>();
+
+    @Getter
+    private final ObjectMapper objectMapper;
+
+    public MultipleVersionsBasedVersioning() {
+        objectMapper = new ObjectMapper();
+        objectMapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, true);
+        objectMapper.configure(FAIL_ON_MISSING_CREATOR_PROPERTIES, true);
+    }
+
+    @Override
+    public E toEvent(String eventJson, String eventName, int eventVersion) {
+        Class<? extends E> eventType = toType(eventName, eventVersion);
+        try {
+            return objectMapper.readValue(eventJson, eventType);
+        } catch (Exception ex) {
+            throw new EventBodyMappingException(eventJson, eventType, ex);
+        }
+    }
 
     @Override
     public String toName(Class<? extends E> eventType) {
@@ -36,12 +61,12 @@ public class MultipleVersionsBasedVersioning<E> implements EventVersioningStrate
     }
 
     @Override
-    public Class<? extends E> toType(String eventName, int eventVersion) {
-        Class<? extends E> eventType = eventNameAndVersionToTypeMap.get(new NameAndVersion(eventName, eventVersion));
-        if (eventType == null) {
-            throw new EventTypeMappingException("Mapping to event type not found for event name: " + eventName + " and event version: " + eventVersion);
+    public String toJson(E event) {
+        try {
+            return objectMapper.writeValueAsString(event);
+        } catch (Exception ex) {
+            throw new EventBodyMappingException(event, ex);
         }
-        return eventType;
     }
 
     public void registerMapping(Class<? extends E> eventType, String eventName, int eventVersion) {
@@ -50,6 +75,14 @@ public class MultipleVersionsBasedVersioning<E> implements EventVersioningStrate
         validateUniqueType(eventType);
         eventNameAndVersionToTypeMap.put(nameAndVersion, eventType);
         eventTypeToNameAndVersionMap.put(eventType, nameAndVersion);
+    }
+
+    private Class<? extends E> toType(String eventName, int eventVersion) {
+        Class<? extends E> eventType = eventNameAndVersionToTypeMap.get(new NameAndVersion(eventName, eventVersion));
+        if (eventType == null) {
+            throw new EventTypeMappingException("Mapping to event type not found for event name: " + eventName + " and event version: " + eventVersion);
+        }
+        return eventType;
     }
 
     /**

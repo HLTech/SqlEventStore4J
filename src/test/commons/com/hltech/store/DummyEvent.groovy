@@ -1,5 +1,7 @@
 package com.hltech.store
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
@@ -7,12 +9,13 @@ import groovy.transform.ToString
 @ToString
 class DummyEvent implements DummyBaseEvent {
 
-    UUID id
-    UUID aggregateId
+    final UUID id
+    final UUID aggregateId
 
+    @JsonCreator
     DummyEvent(
-            UUID id,
-            UUID aggregateId
+            @JsonProperty("id") UUID id,
+            @JsonProperty("aggregateId") UUID aggregateId
     ) {
         this.id = id
         this.aggregateId = aggregateId

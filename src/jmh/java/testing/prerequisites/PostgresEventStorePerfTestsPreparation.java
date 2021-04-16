@@ -1,7 +1,6 @@
 package testing.prerequisites;
 
 import com.hltech.store.DummyBaseEvent;
-import com.hltech.store.DummyEventBodyMapper;
 import com.hltech.store.PostgresEventStore;
 import com.hltech.store.versioning.DummyVersioningStrategy;
 import groovy.sql.Sql;
@@ -52,7 +51,6 @@ public class PostgresEventStorePerfTestsPreparation {
                 DummyBaseEvent.EVENT_ID_EXTRACTOR,
                 DummyBaseEvent.AGGREGATE_ID_EXTRACTOR,
                 new DummyVersioningStrategy(),
-                new DummyEventBodyMapper(),
                 dataSource
         );
     }

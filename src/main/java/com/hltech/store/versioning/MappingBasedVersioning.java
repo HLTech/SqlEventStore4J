@@ -1,7 +1,13 @@
 package com.hltech.store.versioning;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES;
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 /**
  * In this strategy every event exists only in latest version so that the application code has to support only one version of the event.
@@ -16,7 +22,7 @@ import java.util.Map;
  * <p>Be aware that it also has one important and annoying drawback. You are no longer allowed to rename event attribute.
  * What you can do when attribute name is no longer valid, is:
  * - add new attribute with valid name and support both attributes
- * - use copy & replace mechanism to fix no longer valid attribute name
+ * - use copy and replace mechanism to fix no longer valid attribute name
  * - use {@link WrappingBasedVersioning} instead
  */
 public class MappingBasedVersioning<E> implements EventVersioningStrategy<E> {
@@ -25,6 +31,25 @@ public class MappingBasedVersioning<E> implements EventVersioningStrategy<E> {
 
     private final Map<String, Class<? extends E>> eventNameToTypeMap = new HashMap<>();
     private final Map<Class<? extends E>, String> eventTypeToNameMap = new HashMap<>();
+
+    @Getter
+    private final ObjectMapper objectMapper;
+
+    public MappingBasedVersioning() {
+        objectMapper = new ObjectMapper();
+        objectMapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.configure(FAIL_ON_MISSING_CREATOR_PROPERTIES, false);
+    }
+
+    @Override
+    public E toEvent(String eventJson, String eventName, int eventVersion) {
+        Class<? extends E> eventType = toType(eventName);
+        try {
+            return objectMapper.readValue(eventJson, eventType);
+        } catch (Exception ex) {
+            throw new EventBodyMappingException(eventJson, eventType, ex);
+        }
+    }
 
     @Override
     public String toName(Class<? extends E> eventType) {
@@ -41,12 +66,12 @@ public class MappingBasedVersioning<E> implements EventVersioningStrategy<E> {
     }
 
     @Override
-    public Class<? extends E> toType(String eventName, int eventVersion) {
-        Class<? extends E> eventType = eventNameToTypeMap.get(eventName);
-        if (eventType == null) {
-            throw new EventTypeMappingException("Mapping to event type not found for event name: " + eventName);
+    public String toJson(E event) {
+        try {
+            return objectMapper.writeValueAsString(event);
+        } catch (Exception ex) {
+            throw new EventBodyMappingException(event, ex);
         }
-        return eventType;
     }
 
     public void registerMapping(Class<? extends E> eventType, String eventName) {
@@ -54,6 +79,14 @@ public class MappingBasedVersioning<E> implements EventVersioningStrategy<E> {
         validateUniqueType(eventType);
         eventNameToTypeMap.put(eventName, eventType);
         eventTypeToNameMap.put(eventType, eventName);
+    }
+
+    private Class<? extends E> toType(String eventName) {
+        Class<? extends E> eventType = eventNameToTypeMap.get(eventName);
+        if (eventType == null) {
+            throw new EventTypeMappingException("Mapping to event type not found for event name: " + eventName);
+        }
+        return eventType;
     }
 
     /**

@@ -7,12 +7,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 import static java.util.concurrent.CompletableFuture.runAsync
-import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric
+import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric
 
 abstract class EventStoreIT extends Specification {
 
     DummyVersioningStrategy eventVersioningStrategy = new DummyVersioningStrategy()
-    DummyEventBodyMapper eventBodyMapper = new DummyEventBodyMapper()
 
     def "save should be able to save events in database"() {
 
@@ -30,7 +29,7 @@ abstract class EventStoreIT extends Specification {
                 assert databaseUUIDToUUID(rows[idx]['id']) == event.id
                 assert rows[idx]['aggregate_version'] == idx + 1
                 assert databaseUUIDToUUID(rows[idx]['stream_id']) == streamId
-                assert databasePayloadToString(rows[idx]['payload']).replaceAll(" ", "") == eventBodyMapper.eventToString(event).replaceAll(" ", "")
+                assert databasePayloadToString(rows[idx]['payload']).replaceAll(" ", "") == eventVersioningStrategy.toJson(event).replaceAll(" ", "")
                 assert rows[idx]['order_of_occurrence'] != null
                 assert rows[idx]['event_name'] == "DummyEvent"
                 assert rows[idx]['event_version'] == 1
@@ -130,7 +129,7 @@ abstract class EventStoreIT extends Specification {
                 assert databaseUUIDToUUID(rows[idx]['id']) == event.id
                 assert rows[idx]['aggregate_version'] == idx + 1
                 assert databaseUUIDToUUID(rows[idx]['stream_id']) == streamId
-                assert databasePayloadToString(rows[idx]['payload']).replaceAll(" ", "") == eventBodyMapper.eventToString(event).replaceAll(" ", "")
+                assert databasePayloadToString(rows[idx]['payload']).replaceAll(" ", "") == eventVersioningStrategy.toJson(event).replaceAll(" ", "")
                 assert rows[idx]['order_of_occurrence'] != null
                 assert rows[idx]['event_name'] == "DummyEvent"
                 assert rows[idx]['event_version'] == 1
@@ -473,6 +472,5 @@ abstract class EventStoreIT extends Specification {
     ]
     static AGGREGATE_NAME = randomAlphanumeric(5)
     static ANOTHER_AGGREGATE_NAME = randomAlphanumeric(5)
-    static STREAM_ID = UUID.randomUUID()
 
 }
