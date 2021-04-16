@@ -26,6 +26,19 @@ class AggregateRepositoryUT extends Specification {
 
     }
 
+    def "save with optimistic lock should save event in event store in a proper stream"() {
+
+        given: 'Expected aggregate version'
+            Integer expectedAggregateVersion = 1
+
+        when: 'Save event'
+            repository.save(EVENT, expectedAggregateVersion)
+
+        then: 'Event saved in proper stream'
+            1 * eventStore.save(EVENT, AGGREGATE_NAME, expectedAggregateVersion)
+
+    }
+
     def "find should return aggregate with all events applied"() {
 
         given: 'Events for aggregate exists in event store'

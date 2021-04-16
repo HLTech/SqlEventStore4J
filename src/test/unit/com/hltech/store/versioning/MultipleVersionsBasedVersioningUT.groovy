@@ -6,6 +6,7 @@ import com.hltech.store.DummyEvent
 import com.hltech.store.InvalidDummyEvent
 import spock.lang.Specification
 import spock.lang.Subject
+import spock.lang.Unroll
 
 class MultipleVersionsBasedVersioningUT extends Specification {
 
@@ -134,6 +135,26 @@ class MultipleVersionsBasedVersioningUT extends Specification {
         then: 'expected exception thrown'
             def ex = thrown(EventTypeMappingException)
             ex.message == "Mapping to event type not found for event name: $eventName and event version: $anotherEventVersion"
+
+    }
+
+    @Unroll
+    def "toEvent should return event that has previously been used to create json"() {
+
+        given: 'EventType registered for eventName'
+            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+
+        and: 'Json created for event'
+            def json = eventVersioningStrategy.toJson(givenEvent)
+
+        expect: 'toEvent return event that has been previously used to create json'
+            givenEvent == eventVersioningStrategy.toEvent(json, eventName, eventVersion)
+
+        where:
+            givenEvent << [
+                    event,
+                    event.withOptionalAttribute("value")
+            ]
 
     }
 
@@ -321,7 +342,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     static eventType = DummyEvent.class
     static eventName = "DummyEvent"
     static eventVersion = 1
-    static eventJson = """{"id":"$event.id","aggregateId":"$event.aggregateId"}"""
+    static eventJson = """{"id":"$event.id","aggregateId":"$event.aggregateId","optionalAttribute":null}"""
     static eventJsonWithAdditionalAttribute = """{"id":"$event.id","aggregateId":"$event.aggregateId", "additionalAtribute": "value"}"""
     static eventJsonWithoutOneOfAttribute = """{"id":"$event.id"}"""
 
