@@ -31,8 +31,8 @@ class AggregateRepositoryFT extends Specification implements PostgreSQLContainer
     def "find should return aggregate with events and version applied"() {
 
         given: 'Events types mapping registered'
-            eventVersioningStrategy.registerMapping(DummyEvent, "DummyEvent", 1)
-            eventVersioningStrategy.registerMapping(AnotherDummyEvent, "AnotherDummyEvent", 1)
+            eventVersioningStrategy.registerEvent(DummyEvent, "DummyEvent", 1)
+            eventVersioningStrategy.registerEvent(AnotherDummyEvent, "AnotherDummyEvent", 1)
 
         and: 'Events saved in repository'
             UUID aggregateId = UUID.randomUUID()

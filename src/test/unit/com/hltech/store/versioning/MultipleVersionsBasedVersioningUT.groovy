@@ -16,7 +16,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toEvent should return expected event when one previously registered"() {
 
         given: 'EventType registered for eventName'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         expect: 'toEvent return expected event'
             event == eventVersioningStrategy.toEvent(eventJson, eventName, eventVersion)
@@ -26,10 +26,10 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toEvent should return expected event when multi type registered"() {
 
         given: 'EventType registered for eventName'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         and: 'Another eventType registered for another eventName'
-            eventVersioningStrategy.registerMapping(anotherEventType, anotherEventName, anotherEventVersion)
+            eventVersioningStrategy.registerEvent(anotherEventType, anotherEventName, anotherEventVersion)
 
         expect: 'toEvent return expected event for eventName'
             event == eventVersioningStrategy.toEvent(eventJson, eventName, eventVersion)
@@ -42,10 +42,10 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toEvent should return expected event when multi type registered with same names but different versions"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         and: 'Another eventType registered for eventName and another eventVersion'
-            eventVersioningStrategy.registerMapping(anotherEventType, eventName, anotherEventVersion)
+            eventVersioningStrategy.registerEvent(anotherEventType, eventName, anotherEventVersion)
 
         expect: 'toEvent return expected event for eventName and eventVersion'
             event == eventVersioningStrategy.toEvent(eventJson, eventName, eventVersion)
@@ -58,10 +58,10 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toEvent should return expected event when multi type registered with same versions but different names"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         and: 'Another eventType registered for another eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(anotherEventType, anotherEventName, eventVersion)
+            eventVersioningStrategy.registerEvent(anotherEventType, anotherEventName, eventVersion)
 
         expect: 'toEvent return expected event for eventName and eventVersion'
             event == eventVersioningStrategy.toEvent(eventJson, eventName, eventVersion)
@@ -74,7 +74,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toEvent should throw exception when there is additional attribute in json"() {
 
         given: 'EventType registered for eventName'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         when: 'Try to get event from json with additional attribute'
             eventVersioningStrategy.toEvent(eventJsonWithAdditionalAttribute, eventName, eventVersion)
@@ -88,7 +88,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toEvent should throw exception when one of attribute is not present in json"() {
 
         given: 'EventType registered for eventName'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         when: 'Try to get event from json without one of attribute'
             eventVersioningStrategy.toEvent(eventJsonWithoutOneOfAttribute, eventName, eventVersion)
@@ -113,7 +113,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toEvent should throw exception when mapping has been registered but for another eventName"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         when: 'Try to get event by another eventName'
             eventVersioningStrategy.toEvent(eventJson, anotherEventName, eventVersion)
@@ -127,7 +127,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toEvent should throw exception when mapping has been registered but for another eventVersion"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         when: 'Try to get event by another eventVersion'
             eventVersioningStrategy.toEvent(eventJson, eventName, anotherEventVersion)
@@ -142,7 +142,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toEvent should return event that has previously been used to create json"() {
 
         given: 'EventType registered for eventName'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         and: 'Json created for event'
             def json = eventVersioningStrategy.toJson(givenEvent)
@@ -161,7 +161,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toName should return expected eventName when one previously registered"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         expect: 'EventName found by eventType'
             eventName == eventVersioningStrategy.toName(eventType)
@@ -171,10 +171,10 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toName should return expected name when multi type registered"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         and: 'Another eventType registered for another eventName and another eventVersion'
-            eventVersioningStrategy.registerMapping(anotherEventType, anotherEventName, anotherEventVersion)
+            eventVersioningStrategy.registerEvent(anotherEventType, anotherEventName, anotherEventVersion)
 
         expect: 'EventName found by eventType'
             eventName == eventVersioningStrategy.toName(eventType)
@@ -187,10 +187,10 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toName should return expected name when multi type registered with same names but different versions"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         and: 'Another eventType registered for eventName and another eventVersion'
-            eventVersioningStrategy.registerMapping(anotherEventType, eventName, anotherEventVersion)
+            eventVersioningStrategy.registerEvent(anotherEventType, eventName, anotherEventVersion)
 
         expect: 'EventName found by eventType'
             eventName == eventVersioningStrategy.toName(eventType)
@@ -214,7 +214,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toName should throw exception when mapping has been registered but for another eventType"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         when: 'Search for eventName by another eventType'
             eventVersioningStrategy.toName(anotherEventType)
@@ -228,7 +228,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toVersion should return expected eventVersion when one previously registered"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         expect: 'EventVersion found by eventType'
             eventVersion == eventVersioningStrategy.toVersion(eventType)
@@ -238,10 +238,10 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toVersion should return expected version when multi type registered"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         and: 'Another eventType registered for another eventName and another eventVersion'
-            eventVersioningStrategy.registerMapping(anotherEventType, anotherEventName, anotherEventVersion)
+            eventVersioningStrategy.registerEvent(anotherEventType, anotherEventName, anotherEventVersion)
 
         expect: 'EventVersion found by eventType'
             eventVersion == eventVersioningStrategy.toVersion(eventType)
@@ -254,10 +254,10 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toVersion should return expected version when multi type registered with same versions but different names"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         and: 'Another eventType registered for another eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(anotherEventType, anotherEventName, eventVersion)
+            eventVersioningStrategy.registerEvent(anotherEventType, anotherEventName, eventVersion)
 
         expect: 'EventVersion found by eventType'
             eventVersion == eventVersioningStrategy.toVersion(eventType)
@@ -281,7 +281,7 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "toVersion should throw exception when mapping has been registered but for another eventType"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         when: 'Search for eventVersion by another eventType'
             eventVersioningStrategy.toVersion(anotherEventType)
@@ -295,10 +295,10 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "registerMapping should throw exception when mapping has already been registered for given eventName and version"() {
 
         given: 'EventType registered for eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         when: 'EventType registered for same eventName and eventVersion'
-            eventVersioningStrategy.registerMapping(anotherEventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(anotherEventType, eventName, eventVersion)
 
         then: 'expected exception thrown'
             def ex = thrown(NonUniqueMappingException)
@@ -309,10 +309,10 @@ class MultipleVersionsBasedVersioningUT extends Specification {
     def "registerMapping should throw exception when mapping has already been registered for given eventType"() {
 
         given: 'EventType registered for eventType'
-            eventVersioningStrategy.registerMapping(eventType, eventName, eventVersion)
+            eventVersioningStrategy.registerEvent(eventType, eventName, eventVersion)
 
         when: 'EventType registered for same eventType'
-            eventVersioningStrategy.registerMapping(eventType, anotherEventName, anotherEventVersion)
+            eventVersioningStrategy.registerEvent(eventType, anotherEventName, anotherEventVersion)
 
         then: 'expected exception thrown'
             def ex = thrown(NonUniqueMappingException)
