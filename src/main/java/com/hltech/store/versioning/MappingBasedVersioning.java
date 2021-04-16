@@ -74,7 +74,7 @@ public class MappingBasedVersioning<E> implements EventVersioningStrategy<E> {
         }
     }
 
-    public void registerMapping(Class<? extends E> eventType, String eventName) {
+    public void registerEvent(Class<? extends E> eventType, String eventName) {
         validateUniqueEventName(eventName);
         validateUniqueType(eventType);
         eventNameToTypeMap.put(eventName, eventType);

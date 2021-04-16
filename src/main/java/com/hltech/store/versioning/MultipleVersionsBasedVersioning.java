@@ -69,7 +69,7 @@ public class MultipleVersionsBasedVersioning<E> implements EventVersioningStrate
         }
     }
 
-    public void registerMapping(Class<? extends E> eventType, String eventName, int eventVersion) {
+    public void registerEvent(Class<? extends E> eventType, String eventName, int eventVersion) {
         NameAndVersion nameAndVersion = new NameAndVersion(eventName, eventVersion);
         validateUniqueEventNameAndVersion(nameAndVersion);
         validateUniqueType(eventType);
