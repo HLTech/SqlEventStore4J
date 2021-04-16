@@ -49,6 +49,10 @@ public class AggregateRepository<A, E> {
         eventStore.save(event, aggregateName);
     }
 
+    public void save(E event, int expectedAggregateVersion) {
+        eventStore.save(event, aggregateName, expectedAggregateVersion);
+    }
+
     public Optional<A> find(
             UUID aggregateId
     ) {

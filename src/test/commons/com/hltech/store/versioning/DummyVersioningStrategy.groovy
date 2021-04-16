@@ -26,9 +26,11 @@ class DummyVersioningStrategy implements EventVersioningStrategy<DummyBaseEvent>
     @Override
     DummyBaseEvent toEvent(String eventString, String eventName, int eventVersion) {
         def parsedJson = SLURPER.parseText(eventString)
+        def optionalAttribute = parsedJson['optionalAttribute'].toString()
         new DummyEvent(
                 UUID.fromString(parsedJson['id'].toString()),
-                UUID.fromString(parsedJson['aggregateId'].toString())
+                UUID.fromString(parsedJson['aggregateId'].toString()),
+                optionalAttribute == "null" ? null : optionalAttribute
         )
     }
 

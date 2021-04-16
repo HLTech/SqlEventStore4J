@@ -11,22 +11,25 @@ class DummyEvent implements DummyBaseEvent {
 
     final UUID id
     final UUID aggregateId
+    final String optionalAttribute
 
     @JsonCreator
     DummyEvent(
             @JsonProperty("id") UUID id,
-            @JsonProperty("aggregateId") UUID aggregateId
+            @JsonProperty("aggregateId") UUID aggregateId,
+            @JsonProperty("optionalAttribute") String optionalAttribute
     ) {
         this.id = id
         this.aggregateId = aggregateId
+        this.optionalAttribute = optionalAttribute
     }
 
     DummyEvent(UUID aggregateId) {
-        this(UUID.randomUUID(), aggregateId)
+        this(UUID.randomUUID(), aggregateId, null)
     }
 
     DummyEvent() {
-        this(UUID.randomUUID(), UUID.randomUUID())
+        this(UUID.randomUUID(), UUID.randomUUID(), null)
     }
 
     @Override
@@ -37,6 +40,10 @@ class DummyEvent implements DummyBaseEvent {
     @Override
     UUID getAggregateId() {
         aggregateId
+    }
+
+    DummyEvent withOptionalAttribute(String optionalAttribute) {
+        new DummyEvent(id, aggregateId, optionalAttribute)
     }
 
 }
