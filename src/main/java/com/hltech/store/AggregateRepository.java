@@ -75,7 +75,7 @@ public class AggregateRepository<A, E> {
                 .orElseThrow(() -> new AggregateRepositoryException("Could not find aggregate to event: " + toEvent + " for aggregate name: " + aggregateName));
     }
 
-    public List<A> findAll(String aggregateName) {
+    public List<A> findAll() {
         return eventStore
                 .findAll(aggregateName)
                 .values()
