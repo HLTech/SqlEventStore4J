@@ -16,8 +16,8 @@ public class AggregateRepository<A, E> {
     private final BiFunction<A, E, A> eventApplier;
     private final BiFunction<A, Integer, A> aggregateVersionApplier;
 
-    public <P extends EventStore<E>> AggregateRepository(
-            P eventStore,
+    public AggregateRepository(
+            EventStore<E> eventStore,
             String aggregateName,
             Supplier<A> initialAggregateStateSupplier,
             BiFunction<A, E, A> eventApplier,
@@ -30,8 +30,8 @@ public class AggregateRepository<A, E> {
         this.aggregateVersionApplier = aggregateVersionApplier;
     }
 
-    public <P extends EventStore<E>> AggregateRepository(
-            P eventStore,
+    public AggregateRepository(
+            EventStore<E> eventStore,
             String aggregateName,
             Supplier<A> initialAggregateStateSupplier,
             BiFunction<A, E, A> eventApplier
