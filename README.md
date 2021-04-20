@@ -15,7 +15,7 @@
 ## Overview <a name="Overview"></a>
 
 If you want to use event sourcing together with java and sql database this library is for you.
-In additional to its primary goal, which is event persistence, it also:
+In addition to its primary goal, which is event persistence, it also:
 * helps to deal with DDD aggregates (supports aggregate recreation from events)
 * supports hexagonal architecture approach (does not force your events and aggregates to extend library-specific classes)
 * supports multiple [strategies of events versioning](#EventsVersioningStrategies)
@@ -30,7 +30,7 @@ In additional to its primary goal, which is event persistence, it also:
 If you are using gradle add this to build.gradle:
 ```groovy
 dependencies {
-    implementation "com.hltech:sql-event-store-4j:0.0.7"
+    implementation "com.hltech:sql-event-store-4j:version"
     implementation "com.fasterxml.jackson.core:jackson-databind:2.12.1"
 }
 ```
@@ -41,7 +41,7 @@ If you are using maven add this to pom.xml:
     <dependency>
       <groupId>com.hltech</groupId>
       <artifactId>sql-event-store-4j</artifactId>
-      <version>0.0.7</version>
+      <version>version</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -107,9 +107,9 @@ Let's go through required parameters for PostgresEventStore:
     Event store needs to know how to extract aggregate id from your events. All your events implement `Event` interface so we can use `getAggregateId()` method for that.
 * `EventVersioningStrategy<Event> eventVersioningStrategy = new MappingBasedVersioning<>();`
 
-    EventVersioningStrategy is here to determinate how we want to deal with events schemas changes.
+    EventVersioningStrategy is here to determinate how to deal with events schemas changes.
     It is detailed described in [events versioning strategies](#EventsVersioningStrategies).
-    For MappingBasedVersioning strategy that we are using it this example the following configuration is required:
+    For MappingBasedVersioning strategy, that is using it this example, the following configuration is required:
     ```
     eventVersioningStrategy.registerEvent(OrderPlaced.class, "OrderPlaced");
     eventVersioningStrategy.registerEvent(OrderCancelled.class, "OrderCancelled");
@@ -199,7 +199,7 @@ Optional<Order> order = repository.find(aggregateId);
 
 ## Optimistic locking <a name="OptimisticLocking"></a>
 
-Let's assume that you have `Order` aggregate in your code with the rule that if order has been sent it can't be cancel anymore.
+Let's assume that you have `Order` aggregate in your code, with the rule that if order has been sent, it can't be cancelled anymore.
 To ensure that rule we can use optimistic locking and to do that we have to add version field to `Order` aggregate.
 
 ```java
@@ -251,7 +251,7 @@ class Order {
 }
 ```
 
-Now we have to create repository for `Order` aggregate
+Now we have to create a repository for `Order` aggregate
 
 ```java
 class OrderRepository extends AggregateRepository<Order, Event> {
@@ -274,8 +274,8 @@ class OrderRepository extends AggregateRepository<Order, Event> {
 }
 ```
 
-Please note that in additional to repository created in [dealing with aggregates](#DealingWithAggregates) chapter there is additional parameter AGGREGATE_VERSION_APPLIER.
-Repository will use that to set current version of aggregate. After that we can pass that version when saving events in repository to ensure that you deal with latest version of aggregate.
+Please note, that in addition to repository created in [dealing with aggregates](#DealingWithAggregates) chapter, there is additional parameter AGGREGATE_VERSION_APPLIER.
+Repository will use that to set current version of aggregate. After that we can pass that version when saving events in repository, to ensure that you deal with latest version of aggregate.
 Let’s now use OrderRepository to deal with optimistic locking.
 
 ```java
@@ -354,9 +354,9 @@ In this strategy multiple versions of the event have to be supported in the appl
 The application must contain knowledge of all deprecated event versions in order to support them.
 To avoid that consider using [upcasting based versioning](#UpcastingBasedVersioning)
 
-Please note that using this strategy is recommended only if you have one instance of your application running at the same time.
-Using this strategy in multi instance case leads to the situation where all instances must be updated
-to understand latest event version before any instance produces it. For multi instance case consider using [mapping based versioning](#MappingBasedVersioning)
+Please note, that using this strategy is recommended only if you have one instance of your application running at the same time.
+Using this strategy in multi instance case leads to the situation, where all instances must be updated
+to understand latest event version, before any instance produces it. For multi instance case consider using [mapping based versioning](#MappingBasedVersioning)
 
 ### Upcasting <a name="UpcastingBasedVersioning"></a>
 
@@ -378,7 +378,7 @@ class OrderPlaced implements Event {
 }
 ```
 
-Let's say that you want to change that event because now you want to set priority for orders.
+Let's say that you want to change that event, because now you want to set priority for orders.
 
 ```java
 class OrderPlaced implements Event {
@@ -406,13 +406,13 @@ MappingBasedVersioning<Event> eventVersioningStrategy = new MappingBasedVersioni
 eventVersioningStrategy.registerEvent(OrderPlaced.class, "OrderPlaced");
 ```
 
-In this strategy every event exists only in latest version so that the application code has to support only one version of the event.
+In this strategy every event exists only in latest version, so that the application code has to support only one version of the event.
 The mapping strategy is based on three simple principles:
 - When attribute exists on both json and class then set the value from json
 - When attribute exists on json but not on class then do nothing
 - When attribute exists on class but not in json then set default value
 
-This strategy is recommended when you have a multiple instance of your application running at the same time because it supports backward and forward compatibility.
+This strategy is recommended when you have a multiple instance of your application running at the same time, because it supports backward and forward compatibility.
 Be aware that it also has one important and annoying drawback. You are no longer allowed to rename event attribute.
 What you can do when attribute name is no longer valid, is:
 - add new attribute with valid name and support both attributes
