@@ -24,6 +24,10 @@ class DummyEvent implements DummyBaseEvent {
         this.optionalAttribute = optionalAttribute
     }
 
+    DummyEvent(UUID id, UUID aggregateId) {
+        this(id, aggregateId, null)
+    }
+
     DummyEvent(UUID aggregateId) {
         this(UUID.randomUUID(), aggregateId, null)
     }

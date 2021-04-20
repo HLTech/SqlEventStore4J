@@ -20,7 +20,10 @@ class DummyVersioningStrategy implements EventVersioningStrategy<DummyBaseEvent>
 
     @Override
     String toJson(DummyBaseEvent event) {
-        """{ "id": "$event.id", "aggregateId": "$event.aggregateId" }"""
+        if (event['optionalAttribute'] != null) {
+            return """{ "id": "$event.id", "aggregateId": "$event.aggregateId", "optionalAttribute": "$event['optionalAttribute']" }"""
+        }
+        return """{ "id": "$event.id", "aggregateId": "$event.aggregateId"}"""
     }
 
     @Override

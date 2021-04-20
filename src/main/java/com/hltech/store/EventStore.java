@@ -19,6 +19,8 @@ public interface EventStore<E> {
             int expectedAggregateVersion
     );
 
+    boolean contains(E event, String aggregateName);
+
     Map<UUID, List<E>> findAll(String aggregateName);
 
     List<E> findAll(UUID aggregateId, String aggregateName);
