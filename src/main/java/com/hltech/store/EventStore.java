@@ -21,7 +21,9 @@ public interface EventStore<E> {
 
     boolean contains(E event, String aggregateName);
 
-    Map<UUID, List<E>> findAll(String aggregateName);
+    Map<UUID, List<E>> findAllGroupByAggregate(String aggregateName);
+
+    List<E> findAll(String aggregateName);
 
     List<E> findAll(UUID aggregateId);
 

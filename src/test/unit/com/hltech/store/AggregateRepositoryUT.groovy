@@ -169,10 +169,10 @@ class AggregateRepositoryUT extends Specification {
 
     }
 
-    def "findAll should return all aggregates with name"() {
+    def "findAllGroupByAggregate should return all aggregates with name"() {
 
         given: 'Events for aggregate exists in event store for aggregate name'
-            eventStore.findAll(AGGREGATE_NAME) >> [AGGREGATE_ID: [EVENT] ]
+            eventStore.findAllGroupByAggregate(AGGREGATE_NAME) >> [AGGREGATE_ID: [EVENT] ]
 
         when: 'Search for aggregates'
             List<DummyAggregate> aggregates = repository.findAll()
@@ -188,16 +188,50 @@ class AggregateRepositoryUT extends Specification {
 
     }
 
-    def "findAll should return empty list when there is no events related to aggregate name"() {
+    def "findAllGroupByAggregate should return empty list when there is no events related to aggregate name"() {
 
         given: 'Events does not exists in event store for aggregate name'
-            eventStore.findAll(AGGREGATE_NAME) >> [:]
+            eventStore.findAllGroupByAggregate(AGGREGATE_NAME) >> [:]
 
         when: 'Search for aggregates'
             List<DummyAggregate> aggregates = repository.findAll()
 
         then: 'Aggregates not found'
             aggregates.empty
+
+    }
+
+    def "findAllEvents should return all events related to aggregate name"() {
+
+        given: 'Events for aggregate exists in event store for aggregate name'
+            eventStore.findAll(AGGREGATE_NAME) >> [EVENT]
+
+        when: 'Search for events'
+            List<DummyAggregate> events = repository.findAllEvents()
+
+        then: 'Events found'
+            events == [EVENT]
+
+    }
+
+    def "contains should return true when event exist in event store "() {
+
+        given: 'Event exist in event store'
+            eventStore.contains(EVENT, AGGREGATE_NAME) >> true
+
+        expect: 'Contains return true'
+            repository.contains(EVENT)
+
+    }
+
+
+    def "contains should return false when event does not exist in event store"() {
+
+        given: 'Event does not exist in event store'
+            eventStore.contains(EVENT, AGGREGATE_NAME) >> false
+
+        expect: 'Contains return false'
+            !repository.contains(EVENT)
 
     }
 

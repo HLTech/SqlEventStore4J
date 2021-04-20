@@ -173,19 +173,24 @@ public class OracleEventStore<E> implements EventStore<E> {
     }
 
     @Override
-    public Map<UUID, List<E>> findAll(String aggregateName) {
+    public Map<UUID, List<E>> findAllGroupByAggregate(String aggregateName) {
+        return findAll(aggregateName)
+                .stream()
+                .collect(groupingBy(aggregateIdExtractor));
+    }
+
+    @Override
+    public List<E> findAll(String aggregateName) {
         try (
                 Connection con = dataSource.getConnection();
                 PreparedStatement pst = con.prepareStatement(FIND_ALL_BY_AGGREGATE_NAME_QUERY)
         ) {
             pst.setObject(1, aggregateName);
             ResultSet rs = pst.executeQuery();
-
-            List<E> result = extractEventsFromResultSet(rs);
-            return result.stream().collect(groupingBy(aggregateIdExtractor));
+            return extractEventsFromResultSet(rs);
         } catch (SQLException ex) {
             throw new EventStoreException(
-                    String.format("Could not find events for stream %s", aggregateName), ex
+                    String.format("Could not find events for aggregate name %s", aggregateName), ex
             );
         }
     }

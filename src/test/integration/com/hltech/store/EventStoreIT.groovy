@@ -342,7 +342,7 @@ abstract class EventStoreIT extends Specification {
 
     }
 
-    def "findAll by aggregate name should return all events for aggregate name in the stream in correct order"() {
+    def "findAllGroupByAggregate by aggregate name should return all events for aggregate name in the stream in correct order"() {
 
         given: 'Stream for aggregates exist'
             createStream(AGGREGATE_ID, AGGREGATE_NAME)
@@ -353,7 +353,7 @@ abstract class EventStoreIT extends Specification {
             insertEventsToDatabase(ALL_EVENTS, AGGREGATE_NAME)
 
         when: 'Search for events by aggregate name'
-            def events = eventStore.findAll(AGGREGATE_NAME)
+            def events = eventStore.findAllGroupByAggregate(AGGREGATE_NAME)
 
         then: 'Events found for aggregate'
             events[AGGREGATE_ID].size() == AGGREGATE_EVENTS.size()
@@ -372,7 +372,43 @@ abstract class EventStoreIT extends Specification {
             }
 
         and: 'Zero event found for another aggregate name'
-            eventStore.findAll(ANOTHER_AGGREGATE_NAME).isEmpty()
+            eventStore.findAllGroupByAggregate(ANOTHER_AGGREGATE_NAME).isEmpty()
+
+    }
+
+    def "findAllGroupByAggregate by aggregate name should not return events when events has different aggregate name"() {
+
+        given: 'Stream for aggregates exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Events for two different aggregates exist in database in single streams'
+            def ALL_EVENTS = AGGREGATE_EVENTS + ANOTHER_AGGREGATE_EVENTS
+            insertEventsToDatabase(ALL_EVENTS, AGGREGATE_NAME)
+
+        when: 'Search for events by another aggregate name'
+            def events = eventStore.findAllGroupByAggregate(ANOTHER_AGGREGATE_NAME)
+
+        then: 'Events not found'
+            events.isEmpty()
+
+    }
+
+    def "findAll by aggregate name should return all events for aggregate name in correct order"() {
+
+        given: 'Stream for aggregates exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Events for two different aggregates exist in database'
+            def ALL_EVENTS = AGGREGATE_EVENTS + ANOTHER_AGGREGATE_EVENTS
+            insertEventsToDatabase(ALL_EVENTS, AGGREGATE_NAME)
+
+        when: 'Search for events by aggregate name'
+            def events = eventStore.findAll(AGGREGATE_NAME)
+
+        then: 'Events found'
+            events == ALL_EVENTS
 
     }
 
@@ -382,7 +418,7 @@ abstract class EventStoreIT extends Specification {
             createStream(AGGREGATE_ID, AGGREGATE_NAME)
             createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
 
-        and: 'Events for two different aggregates exist in database in single streams'
+        and: 'Events for two different aggregates exist in database'
             def ALL_EVENTS = AGGREGATE_EVENTS + ANOTHER_AGGREGATE_EVENTS
             insertEventsToDatabase(ALL_EVENTS, AGGREGATE_NAME)
 

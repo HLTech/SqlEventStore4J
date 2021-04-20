@@ -77,12 +77,16 @@ public class AggregateRepository<A, E> {
 
     public List<A> findAll() {
         return eventStore
-                .findAll(aggregateName)
+                .findAllGroupByAggregate(aggregateName)
                 .values()
                 .stream()
                 .map(this::toAggregate)
                 .map(Optional::get)
                 .collect(toList());
+    }
+
+    public List<E> findAllEvents() {
+        return eventStore.findAll(aggregateName);
     }
 
     public boolean contains(E event) {
