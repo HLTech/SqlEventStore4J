@@ -50,17 +50,24 @@ public class OracleEventStore<E> implements EventStore<E> {
 
     private static final String FIND_BY_ID_AND_AGGREGATE_ID_AND_AGGREGATE_NAME_QUERY =
             "SELECT e.payload, e.event_name, e.event_version "
-                    + "FROM aggregate_in_stream ais "
-                    + "JOIN event e ON e.stream_id = ais.stream_id "
-                    + "WHERE e.id = ? "
-                    + "AND ais.aggregate_id = ? "
-                    + "AND ais.aggregate_name = ?";
+            + "FROM aggregate_in_stream ais "
+            + "JOIN event e ON e.stream_id = ais.stream_id "
+            + "WHERE e.id = ? "
+            + "AND ais.aggregate_id = ? "
+            + "AND ais.aggregate_name = ?";
 
     public static final String FIND_ALL_BY_AGGREGATE_NAME_QUERY =
             "SELECT e.payload, e.event_name, e.event_version "
             + "FROM aggregate_in_stream ais "
             + "JOIN event e ON e.stream_id = ais.stream_id "
             + "WHERE ais.aggregate_name = ? "
+            + "ORDER BY e.order_of_occurrence ASC";
+
+    private static final String FIND_ALL_BY_AGGREGATE_ID_QUERY =
+            "SELECT e.payload, e.event_name, e.event_version "
+            + "FROM aggregate_in_stream ais "
+            + "JOIN event e ON e.stream_id = ais.stream_id "
+            + "WHERE ais.aggregate_id = ? "
             + "ORDER BY e.order_of_occurrence ASC";
 
     private static final String FIND_ALL_BY_AGGREGATE_ID_AND_AGGREGATE_NAME_QUERY =
@@ -179,6 +186,22 @@ public class OracleEventStore<E> implements EventStore<E> {
         } catch (SQLException ex) {
             throw new EventStoreException(
                     String.format("Could not find events for stream %s", aggregateName), ex
+            );
+        }
+    }
+
+    @Override
+    public List<E> findAll(UUID aggregateId) {
+        try (
+                Connection con = dataSource.getConnection();
+                PreparedStatement pst = con.prepareStatement(FIND_ALL_BY_AGGREGATE_ID_QUERY)
+        ) {
+            pst.setObject(1, uuidToDatabaseUUID(aggregateId));
+            ResultSet rs = pst.executeQuery();
+            return extractEventsFromResultSet(rs);
+        } catch (SQLException ex) {
+            throw new EventStoreException(
+                    String.format("Could not find events for aggregate id %s", aggregateId), ex
             );
         }
     }

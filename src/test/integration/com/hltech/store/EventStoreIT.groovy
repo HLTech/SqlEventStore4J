@@ -394,6 +394,55 @@ abstract class EventStoreIT extends Specification {
 
     }
 
+    def "findAll by aggregateId should return events related to aggregate id in correct order"() {
+
+        given: 'Streams for aggregates exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME)
+
+        and: 'Event exist in database for aggregate id and aggregate name'
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], AGGREGATE_NAME)
+
+        and: 'Event exist in database for aggregate id and another aggregate name'
+            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_AGGREGATE_NAME)
+
+        when: 'Search for events by aggregateId'
+            def events = eventStore.findAll(AGGREGATE_ID)
+
+        then: 'Events found'
+            events.size() == AGGREGATE_EVENTS.size()
+
+        and: 'Events in correct order'
+            AGGREGATE_EVENTS.eachWithIndex { DummyBaseEvent event, int idx ->
+                assert event == events[idx]
+            }
+
+    }
+
+    def "findAll by aggregateId should return only events related to aggregate id"() {
+
+        given: 'Streams for aggregates exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+            createStream(AGGREGATE_ID, ANOTHER_AGGREGATE_NAME)
+            createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Event exist in database for aggregate id and aggregate name'
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], AGGREGATE_NAME)
+
+        and: 'Event exist in database for aggregate id and another aggregate name'
+            insertEventsToDatabase([AGGREGATE_EVENTS[1]], ANOTHER_AGGREGATE_NAME)
+
+        and: 'Events exist in database for another aggregate and aggregate name'
+            insertEventsToDatabase(ANOTHER_AGGREGATE_EVENTS, AGGREGATE_NAME)
+
+        when: 'Search for events by aggregateId'
+            def events = eventStore.findAll(AGGREGATE_ID)
+
+        then: 'Only events for aggregate id returned'
+            events == AGGREGATE_EVENTS
+
+    }
+
     def "findAll by aggregateId and aggregateName should return events related to aggregate in correct order"() {
 
         given: 'Stream for aggregate exist'

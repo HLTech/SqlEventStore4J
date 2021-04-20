@@ -23,6 +23,8 @@ public interface EventStore<E> {
 
     Map<UUID, List<E>> findAll(String aggregateName);
 
+    List<E> findAll(UUID aggregateId);
+
     List<E> findAll(UUID aggregateId, String aggregateName);
 
     List<E> findAllToEvent(E toEvent, String aggregateName);
