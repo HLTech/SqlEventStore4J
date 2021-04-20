@@ -48,6 +48,14 @@ public class OracleEventStore<E> implements EventStore<E> {
             + "WHERE aggregate_id = ? "
             + "AND aggregate_name = ? ";
 
+    private static final String FIND_BY_ID_AND_AGGREGATE_ID_AND_AGGREGATE_NAME_QUERY =
+            "SELECT e.payload, e.event_name, e.event_version "
+                    + "FROM aggregate_in_stream ais "
+                    + "JOIN event e ON e.stream_id = ais.stream_id "
+                    + "WHERE e.id = ? "
+                    + "AND ais.aggregate_id = ? "
+                    + "AND ais.aggregate_name = ?";
+
     public static final String FIND_ALL_BY_AGGREGATE_NAME_QUERY =
             "SELECT e.payload, e.event_name, e.event_version "
             + "FROM aggregate_in_stream ais "
@@ -62,6 +70,7 @@ public class OracleEventStore<E> implements EventStore<E> {
             + "WHERE ais.aggregate_id = ? "
             + "AND ais.aggregate_name = ? "
             + "ORDER BY e.order_of_occurrence ASC";
+
     private static final String FIND_ALL_TO_EVENT_QUERY =
             "SELECT e.payload, e.event_name, e.event_version "
             + "FROM aggregate_in_stream ais "
@@ -118,6 +127,36 @@ public class OracleEventStore<E> implements EventStore<E> {
             throw new EventStoreException(
                     String.format(
                             "Could not save event to database with aggregateId %s and aggregateName %s",
+                            aggregateIdExtractor.apply(event),
+                            aggregateName
+                    ),
+                    ex
+            );
+        }
+    }
+
+    @Override
+    public boolean contains(E event, String aggregateName) {
+        try (
+                Connection con = dataSource.getConnection();
+                PreparedStatement pst = con.prepareStatement(FIND_BY_ID_AND_AGGREGATE_ID_AND_AGGREGATE_NAME_QUERY)
+        ) {
+            pst.setObject(1, uuidToDatabaseUUID(eventIdExtractor.apply(event)));
+            pst.setObject(2, uuidToDatabaseUUID(aggregateIdExtractor.apply(event)));
+            pst.setObject(3, aggregateName);
+            ResultSet rs = pst.executeQuery();
+
+            List<E> events = extractEventsFromResultSet(rs);
+            if (events.isEmpty()) {
+                return false;
+            } else {
+                return events.get(0).equals(event);
+            }
+        } catch (SQLException ex) {
+            throw new EventStoreException(
+                    String.format(
+                            "Could not find event by id %s and aggregate id %s and aggregate name %s",
+                            eventIdExtractor.apply(event),
                             aggregateIdExtractor.apply(event),
                             aggregateName
                     ),

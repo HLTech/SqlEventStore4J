@@ -263,6 +263,85 @@ abstract class EventStoreIT extends Specification {
 
     }
 
+    def "contains should return true when event exist"() {
+
+        given: 'Stream for aggregate exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Event exist in database'
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], AGGREGATE_NAME)
+
+        expect: 'Contains return true'
+            eventStore.contains(AGGREGATE_EVENTS[0], AGGREGATE_NAME)
+
+    }
+
+    def "contains should return false when aggregateName not matched"() {
+
+        given: 'Stream for aggregate exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Event exist in database but for another aggregate name'
+            insertEventsToDatabase([AGGREGATE_EVENTS[0]], ANOTHER_AGGREGATE_NAME)
+
+        expect: 'Contains return false'
+            !eventStore.contains(AGGREGATE_EVENTS[0], AGGREGATE_NAME)
+
+    }
+
+    def "contains should return false when aggregateId not matched"() {
+
+        given: 'Stream for aggregate exist'
+            createStream(ANOTHER_AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Event exist in database but for another aggregate id'
+            def event = new DummyEvent(
+                    AGGREGATE_EVENTS[0].getId(),
+                    ANOTHER_AGGREGATE_ID
+            )
+            insertEventsToDatabase([event], AGGREGATE_NAME)
+
+        expect: 'Contains return false'
+            !eventStore.contains(AGGREGATE_EVENTS[0], AGGREGATE_NAME)
+
+    }
+
+
+    def "contains should return false when eventId not matched"() {
+
+        given: 'Stream for aggregate exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Event exist in database but for another aggregate id'
+            def event = new DummyEvent(
+                    UUID.randomUUID(),
+                    AGGREGATE_EVENTS[0].getAggregateId()
+            )
+            insertEventsToDatabase([event], AGGREGATE_NAME)
+
+        expect: 'Contains return false'
+            !eventStore.contains(AGGREGATE_EVENTS[0], AGGREGATE_NAME)
+
+    }
+
+    def "contains should return false when events are not equals"() {
+
+        given: 'Stream for aggregate exist'
+            createStream(AGGREGATE_ID, AGGREGATE_NAME)
+
+        and: 'Event exist in database but for another aggregate id'
+            def event = new DummyEvent(
+                    AGGREGATE_EVENTS[0].getId(),
+                    AGGREGATE_EVENTS[0].getAggregateId(),
+                    "additionalAttribute"
+            )
+            insertEventsToDatabase([event], AGGREGATE_NAME)
+
+        expect: 'Contains return false'
+            !eventStore.contains(AGGREGATE_EVENTS[0], AGGREGATE_NAME)
+
+    }
+
     def "findAll by aggregate name should return all events for aggregate name in the stream in correct order"() {
 
         given: 'Stream for aggregates exist'

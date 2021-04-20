@@ -85,6 +85,10 @@ public class AggregateRepository<A, E> {
                 .collect(toList());
     }
 
+    public boolean contains(E event) {
+        return eventStore.contains(event, aggregateName);
+    }
+
     private Optional<A> toAggregate(List<E> events) {
         if (events.isEmpty()) {
             return Optional.empty();
