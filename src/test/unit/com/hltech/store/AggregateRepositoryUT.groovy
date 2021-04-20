@@ -169,13 +169,13 @@ class AggregateRepositoryUT extends Specification {
 
     }
 
-    def "findAll should return all aggregates within stream"() {
+    def "findAll should return all aggregates with name"() {
 
-        given: 'Events for aggregate exists in event store for stream'
+        given: 'Events for aggregate exists in event store for aggregate name'
             eventStore.findAll(AGGREGATE_NAME) >> [AGGREGATE_ID: [EVENT] ]
 
         when: 'Search for aggregates'
-            List<DummyAggregate> aggregates = repository.findAll(AGGREGATE_NAME)
+            List<DummyAggregate> aggregates = repository.findAll()
 
         then: 'Aggregates found'
             aggregates.size() == 1
@@ -188,13 +188,13 @@ class AggregateRepositoryUT extends Specification {
 
     }
 
-    def "findAll should return empty list when there is no events in the stream"() {
+    def "findAll should return empty list when there is no events related to aggregate name"() {
 
-        given: 'Events does not exists in event store for stream'
+        given: 'Events does not exists in event store for aggregate name'
             eventStore.findAll(AGGREGATE_NAME) >> [:]
 
         when: 'Search for aggregates'
-            List<DummyAggregate> aggregates = repository.findAll(AGGREGATE_NAME)
+            List<DummyAggregate> aggregates = repository.findAll()
 
         then: 'Aggregates not found'
             aggregates.empty
